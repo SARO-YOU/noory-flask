@@ -13,8 +13,10 @@ import { defineConfig } from 'vite'
        strictPort: false,
        allowedHosts: [
          'nooryshop.onrender.com',
+         'shop.nooreyshop.abrdns.com',
          'localhost',
-         '.onrender.com'
+         '.onrender.com',
+         '.abrdns.com'
        ]
      }
    })
