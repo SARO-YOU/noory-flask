@@ -1,160 +1,97 @@
-import { useState, useEffect, useMemo } from 'react';
-import { base44 } from './base44Client';
-import './App.css';
+import { useState } from 'react'
+import './App.css'
+import { PRODUCTS, getProductsByCategory } from './products'
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState([]);
-  const [showCart, setShowCart] = useState(false);
+  const [cart, setCart] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('all')
 
-  const categories = ['all', 'Dairy', 'Pantry', 'Beverages', 'Snacks', 'Personal Care', 'Household', 'Frozen'];
+  // Get products for the selected category
+  const displayedProducts = getProductsByCategory(selectedCategory)
 
-  // Load products when component mounts
-  useEffect(() => {
-    const loadProducts = async () => {
-      const data = await base44.entities.Product.filter({});
-      setProducts(data);
-    };
-    loadProducts();
-  }, []);
+  // Categories for the tabs
+  const categories = [
+    { id: 'all', name: 'All' },
+    { id: 'dairy', name: 'Dairy' },
+    { id: 'groceries', name: 'Pantry' },
+    { id: 'beverages', name: 'Beverages' },
+    { id: 'snacks', name: 'Snacks' },
+    { id: 'personal_care', name: 'Personal Care' },
+    { id: 'household', name: 'Household' },
+    { id: 'frozen', name: 'Frozen' }
+  ]
 
-  // Filter products using useMemo for better performance
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-    
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
-    }
-    
-    if (searchTerm) {
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    return filtered;
-  }, [products, selectedCategory, searchTerm]);
-
+  // Add item to cart
   const addToCart = (product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => 
-          item.id === product.id 
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { ...product, quantity: 1 }];
-    });
-  };
-
-  const removeFromCart = (productId) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
-  };
-
-  const updateQuantity = (productId, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productId);
-      return;
+    const existingItem = cart.find(item => item.id === product.id)
+    
+    if (existingItem) {
+      setCart(cart.map(item => 
+        item.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ))
+    } else {
+      setCart([...cart, { ...product, quantity: 1 }])
     }
-    setCart(prev => prev.map(item => 
-      item.id === productId ? { ...item, quantity: newQuantity } : item
-    ));
-  };
+  }
 
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  // Calculate total items in cart
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
     <div className="app">
-      {/* Header */}
       <header className="header">
         <h1>🛍️ NOORIY</h1>
-        <div className="header-right">
-          <button className="cart-btn" onClick={() => setShowCart(!showCart)}>
-            🛒 Cart ({cartCount})
-          </button>
+        <div className="cart-button">
+          🛒 Cart ({totalItems})
         </div>
       </header>
 
-      {/* Search Bar */}
-      <div className="search-container">
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-      </div>
-
-      {/* Category Tabs */}
       <div className="categories">
-        {categories.map(cat => (
+        {categories.map(category => (
           <button
-            key={cat}
-            className={`category-btn ${selectedCategory === cat ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(cat)}
+            key={category.id}
+            className={`category-tab ${selectedCategory === category.id ? 'active' : ''}`}
+            onClick={() => setSelectedCategory(category.id)}
           >
-            {cat}
+            {category.name}
           </button>
         ))}
       </div>
 
-      {/* Shopping Cart Modal */}
-      {showCart && (
-        <div className="cart-modal">
-          <div className="cart-content">
-            <h2>Shopping Cart</h2>
-            {cart.length === 0 ? (
-              <p>Your cart is empty</p>
-            ) : (
-              <>
-                {cart.map(item => (
-                  <div key={item.id} className="cart-item">
-                    <div>
-                      <strong>{item.name}</strong>
-                      <p>${item.price} each</p>
-                    </div>
-                    <div className="cart-item-controls">
-                      <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                      <span>{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
-                      <button onClick={() => removeFromCart(item.id)}>🗑️</button>
-                    </div>
-                  </div>
-                ))}
-                <div className="cart-total">
-                  <strong>Total: ${cartTotal}</strong>
-                </div>
-              </>
-            )}
-            <button className="close-cart" onClick={() => setShowCart(false)}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* Products Grid */}
       <div className="products-grid">
-        {filteredProducts.map(product => (
+        {displayedProducts.map(product => (
           <div key={product.id} className="product-card">
-            <h3>{product.name}</h3>
-            <p className="price">${product.price}</p>
-            <p className="category">{product.category}</p>
-            <button 
-              className="add-to-cart-btn"
-              onClick={() => addToCart(product)}
-            >
-              Add to Cart
-            </button>
+            <img 
+              src={product.image_url} 
+              alt={product.name}
+              className="product-image"
+            />
+            <div className="product-info">
+              <h3 className="product-name">{product.name}</h3>
+              <p className="product-description">{product.description}</p>
+              <div className="product-footer">
+                <span className="product-price">KSh {product.price}</span>
+                <button 
+                  className="add-to-cart-btn"
+                  onClick={() => addToCart(product)}
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
           </div>
         ))}
       </div>
+
+      {displayedProducts.length === 0 && (
+        <div className="no-products">
+          <p>No products found in this category.</p>
+        </div>
+      )}
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
