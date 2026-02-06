@@ -4,12 +4,17 @@ import { defineConfig } from 'vite'
    export default defineConfig({
      plugins: [react()],
      server: {
-       host: true,
-       allowedHosts: ['all']
+       host: '0.0.0.0',
+       strictPort: false,
      },
      preview: {
        host: '0.0.0.0',
        port: 4173,
-       allowedHosts: ['all']
+       strictPort: false,
+       allowedHosts: [
+         'nooryshop.onrender.com',
+         'localhost',
+         '.onrender.com'
+       ]
      }
    })
