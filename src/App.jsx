@@ -26,12 +26,14 @@ function App() {
     const existingItem = cart.find(item => item.id === product.id)
     
     if (existingItem) {
+      // If item already in cart, increase quantity
       setCart(cart.map(item => 
         item.id === product.id 
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ))
     } else {
+      // Add new item to cart
       setCart([...cart, { ...product, quantity: 1 }])
     }
   }
@@ -41,6 +43,7 @@ function App() {
 
   return (
     <div className="app">
+      {/* Header - STICKY */}
       <header className="header">
         <h1>🛍️ NOORIY</h1>
         <div className="cart-button">
@@ -48,6 +51,7 @@ function App() {
         </div>
       </header>
 
+      {/* Category Tabs - STICKY */}
       <div className="categories">
         {categories.map(category => (
           <button
@@ -60,36 +64,44 @@ function App() {
         ))}
       </div>
 
-      <div className="products-grid">
-        {displayedProducts.map(product => (
-          <div key={product.id} className="product-card">
-            <img 
-              src={product.image_url} 
-              alt={product.name}
-              className="product-image"
-            />
-            <div className="product-info">
-              <h3 className="product-name">{product.name}</h3>
-              <p className="product-description">{product.description}</p>
-              <div className="product-footer">
-                <span className="product-price">KSh {product.price}</span>
-                <button 
-                  className="add-to-cart-btn"
-                  onClick={() => addToCart(product)}
-                >
-                  Add to Cart
-                </button>
+      {/* Products Container - PREVENTS infinite scroll */}
+      <div className="products-container">
+        {displayedProducts.length > 0 ? (
+          <div className="products-grid">
+            {displayedProducts.map(product => (
+              <div key={product.id} className="product-card">
+                <img 
+                  src={product.image_url} 
+                  alt={product.name}
+                  className="product-image"
+                />
+                <div className="product-info">
+                  <h3 className="product-name">{product.name}</h3>
+                  <p className="product-description">{product.description}</p>
+                  <div className="product-footer">
+                    <span className="product-price">KSh {product.price}</span>
+                    <button 
+                      className="add-to-cart-btn"
+                      onClick={() => addToCart(product)}
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          <div className="no-products">
+            <p>No products found in this category.</p>
+          </div>
+        )}
       </div>
 
-      {displayedProducts.length === 0 && (
-        <div className="no-products">
-          <p>No products found in this category.</p>
-        </div>
-      )}
+      {/* Footer - STOPS infinite scroll */}
+      <footer className="footer">
+        <p>© 2026 NOORIY Shop - All Rights Reserved</p>
+      </footer>
     </div>
   )
 }
