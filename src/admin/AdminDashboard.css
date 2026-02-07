@@ -1,0 +1,401 @@
+.admin-dashboard {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+/* Header */
+.admin-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.admin-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.logout-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Navigation Tabs */
+.admin-nav {
+  background: white;
+  padding: 0 30px;
+  display: flex;
+  gap: 5px;
+  border-bottom: 2px solid #e0e0e0;
+  overflow-x: auto;
+}
+
+.nav-tab {
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  color: #667eea;
+  background: #f5f7fa;
+}
+
+.nav-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+/* Content Area */
+.admin-content {
+  padding: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.admin-content h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+}
+
+/* Overview Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+  font-size: 40px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  margin: 5px 0 0 0;
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Delivery Zones Tab */
+.delivery-zones-tab {
+  max-width: 1200px;
+}
+
+.tab-header {
+  margin-bottom: 30px;
+}
+
+.tab-header h2 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.tab-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.km-rate-setting {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.km-rate-setting label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.km-rate-input {
+  width: 80px;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  margin: 0 5px;
+}
+
+.km-rate-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.zones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.zone-card {
+  background: white;
+  border-radius: 12px;
+  border-left: 5px solid;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.zone-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.zone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.zone-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.edit-zone-btn {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.edit-zone-btn:hover {
+  background: #5568d3;
+}
+
+.zone-areas {
+  margin-bottom: 20px;
+}
+
+.zone-areas strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 14px;
+}
+
+.areas-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.area-tag {
+  padding: 5px 12px;
+  background: #f0f0f0;
+  border-radius: 15px;
+  font-size: 12px;
+  color: #555;
+}
+
+.zone-fees {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.fee-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.fee-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+
+.fee-value.driver {
+  color: #27ae60;
+}
+
+.fee-value.company {
+  color: #667eea;
+}
+
+.zone-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.fee-input {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fee-input label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.fee-input input {
+  width: 100px;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.fee-input input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.fee-input input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.zone-info-box {
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 25px;
+  margin-top: 30px;
+}
+
+.zone-info-box h4 {
+  margin: 0 0 15px 0;
+  color: #667eea;
+  font-size: 16px;
+}
+
+.zone-info-box ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #555;
+  line-height: 1.8;
+}
+
+.zone-info-box li {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .admin-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .admin-header h1 {
+    font-size: 20px;
+  }
+  
+  .admin-nav {
+    padding: 0 15px;
+  }
+  
+  .nav-tab {
+    font-size: 12px;
+    padding: 12px 15px;
+  }
+  
+  .admin-content {
+    padding: 15px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .zones-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .km-rate-setting label {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

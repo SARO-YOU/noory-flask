@@ -1,0 +1,77 @@
+.driver-login-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  padding: 20px;
+}
+
+.driver-login-box {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.driver-login-box h1 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 32px;
+}
+
+.driver-login-box p {
+  color: #666;
+  margin: 0 0 30px 0;
+  font-size: 14px;
+}
+
+.driver-input {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  font-size: 16px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.driver-input:focus {
+  outline: none;
+  border-color: #11998e;
+}
+
+.driver-login-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.driver-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(17, 153, 142, 0.4);
+}
+
+.driver-login-btn:active {
+  transform: translateY(0);
+}
+
+.error-message {
+  color: #e74c3c;
+  background: #fadbd8;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 14px;
+}
