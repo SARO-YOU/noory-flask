@@ -1,6 +1,5 @@
-// src/api/base44Client.js - API CLIENT FOR NOORIY
-
-const API_URL = 'https://noory.cloud-ip.cc/api';
+// src/api/base44Client.js
+const API_URL = 'https://api.noory.cloud-ip.cc/api';
 
 export const base44 = {
   entities: {
@@ -8,38 +7,23 @@ export const base44 = {
       filter: async (params) => {
         try {
           let url = `${API_URL}/products`;
-          
-          // Add query parameters
           const queryParams = new URLSearchParams();
-          if (params.in_stock !== undefined) {
+          
+          if (params?.in_stock !== undefined) {
             queryParams.append('in_stock', params.in_stock.toString());
           }
-          if (params.category && params.category !== 'all') {
+          if (params?.category && params.category !== 'all') {
             queryParams.append('category', params.category);
           }
           
-          if (queryParams.toString()) {
-            url += `?${queryParams.toString()}`;
-          }
+          if (queryParams.toString()) url += `?${queryParams.toString()}`;
           
           const response = await fetch(url);
           if (!response.ok) throw new Error('Failed to fetch products');
-          
           return await response.json();
         } catch (error) {
-          console.error('Error fetching products:', error);
+          console.error('Error:', error);
           return [];
-        }
-      },
-      
-      get: async (id) => {
-        try {
-          const response = await fetch(`${API_URL}/products/${id}`);
-          if (!response.ok) throw new Error('Product not found');
-          return await response.json();
-        } catch (error) {
-          console.error('Error fetching product:', error);
-          return null;
         }
       }
     },
@@ -49,17 +33,13 @@ export const base44 = {
         try {
           const response = await fetch(`${API_URL}/orders`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)
           });
-          
           if (!response.ok) throw new Error('Failed to create order');
-          
           return await response.json();
         } catch (error) {
-          console.error('Error creating order:', error);
+          console.error('Error:', error);
           throw error;
         }
       },
@@ -67,16 +47,14 @@ export const base44 = {
       filter: async (params) => {
         try {
           let url = `${API_URL}/orders`;
-          if (params.buyer_email) {
+          if (params?.buyer_email) {
             url += `?buyer_email=${encodeURIComponent(params.buyer_email)}`;
           }
-          
           const response = await fetch(url);
           if (!response.ok) throw new Error('Failed to fetch orders');
-          
           return await response.json();
         } catch (error) {
-          console.error('Error fetching orders:', error);
+          console.error('Error:', error);
           return [];
         }
       }
@@ -88,12 +66,10 @@ export const base44 = {
           const response = await fetch(
             `${API_URL}/loyalty-cards?email=${encodeURIComponent(params.user_email)}`
           );
-          
           if (!response.ok) throw new Error('Failed to fetch loyalty card');
-          
           return await response.json();
         } catch (error) {
-          console.error('Error fetching loyalty card:', error);
+          console.error('Error:', error);
           return [];
         }
       }
@@ -101,15 +77,10 @@ export const base44 = {
   },
   
   auth: {
-    me: async () => {
-      // Mock authentication - replace with real auth later
-      const mockUser = {
-        email: 'customer@nooriy.com',
-        full_name: 'Valued Customer',
-        id: 'user_123'
-      };
-      
-      return mockUser;
-    }
+    me: async () => ({
+      email: 'customer@nooriy.com',
+      full_name: 'Valued Customer',
+      id: 'user_123'
+    })
   }
 };
