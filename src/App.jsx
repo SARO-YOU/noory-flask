@@ -6,10 +6,19 @@ import Cart from './Cart'
 function App() {
   const [cart, setCart] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [isCartOpen, setIsCartOpen] = useState(false) // NEW: Track if cart is open
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('') // NEW: Search state
 
   // Get products for the selected category
-  const displayedProducts = getProductsByCategory(selectedCategory)
+  let displayedProducts = getProductsByCategory(selectedCategory)
+
+  // NEW: Filter by search query
+  if (searchQuery.trim() !== '') {
+    displayedProducts = displayedProducts.filter(product =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }
 
   // Categories for the tabs
   const categories = [
@@ -28,14 +37,12 @@ function App() {
     const existingItem = cart.find(item => item.id === product.id)
     
     if (existingItem) {
-      // If item already in cart, increase quantity
       setCart(cart.map(item => 
         item.id === product.id 
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ))
     } else {
-      // Add new item to cart
       setCart([...cart, { ...product, quantity: 1 }])
     }
   }
@@ -48,7 +55,6 @@ function App() {
       {/* Header - STICKY */}
       <header className="header">
         <h1>🛍️ NOORIY</h1>
-        {/* Cart Button - Click to open cart */}
         <div 
           className="cart-button"
           onClick={() => setIsCartOpen(true)}
@@ -56,6 +62,25 @@ function App() {
           🛒 Cart ({totalItems})
         </div>
       </header>
+
+      {/* Search Bar - NEW */}
+      <div className="search-container">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="🔍 Search products..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button 
+            className="clear-search"
+            onClick={() => setSearchQuery('')}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Category Tabs - STICKY */}
       <div className="categories">
@@ -99,7 +124,11 @@ function App() {
           </div>
         ) : (
           <div className="no-products">
-            <p>No products found in this category.</p>
+            <p>
+              {searchQuery 
+                ? `No products found for "${searchQuery}"`
+                : 'No products found in this category.'}
+            </p>
           </div>
         )}
       </div>
