@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import './App.css'
 import { PRODUCTS, getProductsByCategory } from './products'
+import Cart from './cart'
 
 function App() {
   const [cart, setCart] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [isCartOpen, setIsCartOpen] = useState(false) // NEW: Track if cart is open
 
   // Get products for the selected category
   const displayedProducts = getProductsByCategory(selectedCategory)
@@ -46,7 +48,11 @@ function App() {
       {/* Header - STICKY */}
       <header className="header">
         <h1>🛍️ NOORIY</h1>
-        <div className="cart-button">
+        {/* Cart Button - Click to open cart */}
+        <div 
+          className="cart-button"
+          onClick={() => setIsCartOpen(true)}
+        >
           🛒 Cart ({totalItems})
         </div>
       </header>
@@ -102,6 +108,14 @@ function App() {
       <footer className="footer">
         <p>© 2026 NOORIY Shop - All Rights Reserved</p>
       </footer>
+
+      {/* Cart Sidebar Component */}
+      <Cart 
+        cart={cart}
+        setCart={setCart}
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+      />
     </div>
   )
 }
