@@ -1,0 +1,327 @@
+.driver-dashboard {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+/* Header */
+.driver-header {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.driver-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.driver-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.driver-info span {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.driver-logout-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.driver-logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Stats Bar */
+.driver-stats {
+  background: white;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.driver-stat {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 32px;
+  font-weight: bold;
+  color: #11998e;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tabs */
+.driver-tabs {
+  background: white;
+  padding: 0 30px;
+  display: flex;
+  gap: 5px;
+  border-bottom: 2px solid #e0e0e0;
+  overflow-x: auto;
+}
+
+.driver-tab {
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.driver-tab:hover {
+  color: #11998e;
+  background: #f5f7fa;
+}
+
+.driver-tab.active {
+  color: #11998e;
+  border-bottom-color: #11998e;
+}
+
+/* Content Area */
+.driver-content {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Order Cards */
+.order-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.order-card.available {
+  border-left: 4px solid #11998e;
+}
+
+.order-card.active {
+  border-left: 4px solid #f39c12;
+}
+
+.order-card.completed {
+  border-left: 4px solid #27ae60;
+  opacity: 0.8;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.order-id {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.order-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.order-status {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.order-status.accepted {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.order-status.picked_up {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.order-status.on_the_way {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.order-status.delivered {
+  background: #d4edda;
+  color: #155724;
+}
+
+.order-details {
+  margin-bottom: 15px;
+}
+
+.order-details p {
+  margin: 8px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.order-details strong {
+  color: #333;
+}
+
+/* Buttons */
+.accept-order-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.accept-order-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(17, 153, 142, 0.3);
+}
+
+.order-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.status-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.status-btn.pickup {
+  background: #ffeaa7;
+  color: #856404;
+}
+
+.status-btn.delivery {
+  background: #74b9ff;
+  color: #004085;
+}
+
+.status-btn.complete {
+  background: #55efc4;
+  color: #155724;
+}
+
+.status-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* No Orders State */
+.no-orders {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.no-orders p {
+  font-size: 18px;
+  color: #666;
+  margin: 0 0 10px 0;
+}
+
+.no-orders small {
+  font-size: 14px;
+  color: #999;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .driver-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .driver-header h1 {
+    font-size: 20px;
+  }
+  
+  .driver-stats {
+    padding: 15px;
+    gap: 10px;
+  }
+  
+  .stat-number {
+    font-size: 24px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .driver-tabs {
+    padding: 0 15px;
+  }
+  
+  .driver-tab {
+    font-size: 12px;
+    padding: 12px 15px;
+  }
+  
+  .driver-content {
+    padding: 15px;
+  }
+  
+  .order-actions {
+    flex-direction: column;
+  }
+}
