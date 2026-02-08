@@ -8,6 +8,7 @@ import RegisterForm from './components/RegisterForm'
 import ProfileMenu from './components/ProfileMenu'
 import FeedbackForm from './components/FeedbackForm'
 import DriverApplicationForm from './components/DriverApplicationForm'
+import LoadingScreen from './components/LoadingScreen'
 
 function App() {
   const [products, setProducts] = useState([])
@@ -20,6 +21,7 @@ function App() {
   const [showRegister, setShowRegister] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showDriverApp, setShowDriverApp] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const categories = [
     { id: 'all', name: 'All Products', icon: '🛒' },
@@ -33,14 +35,22 @@ function App() {
 
   const fetchProducts = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch('https://noory-backend.onrender.com/api/products')
       const data = await response.json()
       setProducts(data)
+      
+      // Minimum loading time for better UX (2 seconds)
+      setTimeout(() => {
+        setIsLoading(false)
+      }, 2000)
     } catch (error) {
       console.error('Error fetching products:', error)
+      setIsLoading(false)
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchProducts()
   }, [])
@@ -95,6 +105,11 @@ function App() {
 
   const handleLogout = () => {
     setUser(null)
+  }
+
+  // Show loading screen
+  if (isLoading) {
+    return <LoadingScreen />
   }
 
   // Show Admin Dashboard if logged in as admin
