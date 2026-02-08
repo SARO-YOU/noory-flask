@@ -523,8 +523,13 @@ def serve_react(path):
         return send_from_directory(app.static_folder, "index.html")
 
 
-# ===== RUN SERVER =====
+## ===== RUN SERVER =====
 if __name__ == '__main__':
+    # Create database tables if they don't exist
+    with app.app_context():
+        db.create_all()
+        print("✅ Database tables ready!")
+    
     print("🚀 Starting NOORIY Flask Server...")
     print("📦 Loaded", len(PRODUCTS), "products")
     # Use environment port for Render, fallback to 8000 locally
