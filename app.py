@@ -12,8 +12,10 @@ app = Flask(__name__, static_folder="static")
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ===== In-memory storage =====
+# ===== In-memory storage =====
 orders_db = []
 loyalty_cards_db = []
+users_db = []  # NEW: Store users here
 
 # ===== PRODUCTS ENDPOINTS =====
 @app.route('/api/products', methods=['GET'])
@@ -150,6 +152,103 @@ def search_products():
 
     results = [p for p in PRODUCTS if query in p['name'].lower() or query in p.get('description', '').lower()]
     return jsonify(results)
+# ===== AUTHENTICATION ROUTES =====
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        email = data.get('email', '').strip()
+        
+        if not username or not password:
+            return jsonify({"error": "Username and password required"}), 400
+        
+        # Check if user already exists
+        existing_user = next((u for u in users_db if u['username'] == username), None)
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
+        
+        # Create new user
+        user = {
+            "id": f"USER-{len(users_db) + 1:05d}",
+            "username": username,
+            "password": password,  # In production, hash this!
+            "email": email,
+            "type": "customer",
+            "created_at": datetime.now().isoformat()
+        }
+        
+        users_db.append(user)
+        
+        return jsonify({
+            "user": {
+                "id": user['id'],
+                "username": user['username'],
+                "email": user['email'],
+                "type": user['type']
+            }
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not username or not password:
+            return jsonify({"error": "Username and password required"}), 400
+        
+        # Check for admin password
+        ADMIN_PASSWORD = 'ITSALOTOFWORKMAN'
+        if password == ADMIN_PASSWORD:
+            return jsonify({
+                "user": {
+                    "username": username,
+                    "type": "admin",
+                    "displayName": f"{username} - ADMIN"
+                }
+            }), 200
+        
+        # Check for driver password (format: DRIVER1-secret)
+        import re
+        driver_pattern = r'^DRIVER(\d+)-(.+)$'
+        driver_match = re.match(driver_pattern, password)
+        
+        if driver_match:
+            driver_number = driver_match.group(1)
+            return jsonify({
+                "user": {
+                    "username": username,
+                    "type": "driver",
+                    "driverNumber": driver_number,
+                    "displayName": f"{username} - Driver #{driver_number}"
+                }
+            }), 200
+        
+        # Regular customer login
+        user = next((u for u in users_db if u['username'] == username and u['password'] == password), None)
+        
+        if not user:
+            return jsonify({"error": "Invalid username or password"}), 401
+        
+        return jsonify({
+            "user": {
+                "id": user['id'],
+                "username": user['username'],
+                "email": user['email'],
+                "type": user['type'],
+                "displayName": user['username']
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 # ===== ERROR HANDLERS =====
