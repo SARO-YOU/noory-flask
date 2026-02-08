@@ -1,27 +1,30 @@
 import './Cart.css'
 
-function Cart({ cart, setCart, isOpen, onClose }) {
+function Cart({ cart, isOpen, onClose, onRemove, onUpdateQuantity }) {
   // Remove item from cart
   const removeFromCart = (productId) => {
-    setCart(cart.filter(item => item.id !== productId))
+    onRemove(productId)
   }
 
   // Increase quantity
   const increaseQuantity = (productId) => {
-    setCart(cart.map(item =>
-      item.id === productId
-        ? { ...item, quantity: item.quantity + 1 }
-        : item
-    ))
+    const item = cart.find(i => i.id === productId)
+    if (item) {
+      onUpdateQuantity(productId, item.quantity + 1)
+    }
   }
 
   // Decrease quantity
   const decreaseQuantity = (productId) => {
-    setCart(cart.map(item =>
-      item.id === productId
-        ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-        : item
-    ))
+    const item = cart.find(i => i.id === productId)
+    if (item) {
+      onUpdateQuantity(productId, Math.max(1, item.quantity - 1))
+    }
+  }
+
+  // Clear entire cart
+  const clearCart = () => {
+    cart.forEach(item => onRemove(item.id))
   }
 
   // Calculate total price
@@ -45,6 +48,15 @@ function Cart({ cart, setCart, isOpen, onClose }) {
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
+        {/* Clear Cart Button */}
+        {cart.length > 0 && (
+          <div className="clear-cart-container">
+            <button className="clear-cart-btn" onClick={clearCart}>
+              🗑️ Clear Cart
+            </button>
+          </div>
+        )}
+
         {/* Cart Items */}
         <div className="cart-items">
           {cart.length === 0 ? (
@@ -55,11 +67,6 @@ function Cart({ cart, setCart, isOpen, onClose }) {
           ) : (
             cart.map(item => (
               <div key={item.id} className="cart-item">
-                <img 
-                  src={item.image_url} 
-                  alt={item.name}
-                  className="cart-item-image"
-                />
                 <div className="cart-item-details">
                   <h4 className="cart-item-name">{item.name}</h4>
                   <p className="cart-item-price">KSh {item.price}</p>
