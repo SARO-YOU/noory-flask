@@ -8,6 +8,7 @@ import RegisterForm from './components/RegisterForm'
 import ProfileMenu from './components/ProfileMenu'
 import FeedbackForm from './components/FeedbackForm'
 import DriverApplicationForm from './components/DriverApplicationForm'
+import LoadingScreen from './components/LoadingScreen'
 
 function App() {
   const [products, setProducts] = useState([])
@@ -20,6 +21,7 @@ function App() {
   const [showRegister, setShowRegister] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showDriverApp, setShowDriverApp] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const categories = [
     { id: 'all', name: 'All Products', icon: '🛒' },
@@ -33,16 +35,35 @@ function App() {
 
   const fetchProducts = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch('https://noory-backend.onrender.com/api/products')
       const data = await response.json()
       setProducts(data)
+      
+      // Minimum loading time for better UX (2 seconds)
+      setTimeout(() => {
+        setIsLoading(false)
+      }, 2000)
     } catch (error) {
       console.error('Error fetching products:', error)
+      setIsLoading(false)
     }
   }
 
   useEffect(() => {
     fetchProducts()
+    
+    // Check for saved user session
+    const savedUser = localStorage.getItem('nooriy_user')
+    if (savedUser) {
+      try {
+        const userData = JSON.parse(savedUser)
+        setUser(userData)
+      } catch (err) {
+        console.error('Error loading saved session:', err)
+        localStorage.removeItem('nooriy_user')
+      }
+    }
   }, [])
 
   const filteredProducts = products.filter(product => {
@@ -84,6 +105,7 @@ function App() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   const handleLoginSuccess = (userData) => {
+    console.log('Login success, user data:', userData)
     setUser(userData)
     setShowLogin(false)
   }
@@ -95,12 +117,18 @@ function App() {
 
   const handleLogout = () => {
     setUser(null)
+    localStorage.removeItem('nooriy_user')
+  }
+
+  // Show loading screen
+  if (isLoading) {
+    return <LoadingScreen />
   }
 
   // Show Admin Dashboard if logged in as admin
   if (user && user.type === 'admin') {
     return <AdminDashboard 
-      adminName={user.displayName}
+      adminName={user.displayName || user.username}
       onLogout={handleLogout} 
     />
   }

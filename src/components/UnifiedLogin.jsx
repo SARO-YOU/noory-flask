@@ -33,11 +33,16 @@ function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
       const data = await response.json();
 
       if (response.ok) {
-        onLoginSuccess(data);
+        // Save user to localStorage for session persistence
+        localStorage.setItem('nooriy_user', JSON.stringify(data.user));
+        
+        // Pass user data to parent
+        onLoginSuccess(data.user);
       } else {
         setError(data.error || 'Login failed');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -61,6 +66,7 @@ function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="login-input"
+              autoComplete="username"
             />
           </div>
 
@@ -72,6 +78,7 @@ function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="login-input"
+              autoComplete="current-password"
             />
           </div>
           
@@ -84,7 +91,8 @@ function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
 
         <div className="login-help">
           <p>📝 Don't have an account? <button className="link-btn" onClick={onRegisterClick}>Register here</button></p>
-          <p className="hint-text">🚗 Drivers: Use password format DRIVER#-yourpassword</p>
+          <p className="hint-text">💼 Admin password: ITSALOTOFWORKMAN</p>
+          <p className="hint-text">🚗 Drivers: Get credentials from admin</p>
         </div>
       </div>
     </div>

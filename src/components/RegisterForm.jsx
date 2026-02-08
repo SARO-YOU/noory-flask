@@ -34,6 +34,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
     }
 
     setLoading(true);
+    setError('');
 
     try {
       const response = await fetch('https://noory-backend.onrender.com/api/auth/register', {
@@ -52,11 +53,14 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
       const data = await response.json();
 
       if (response.ok) {
+        // Registration successful
+        alert('Account created successfully! Please login.');
         onRegisterSuccess();
       } else {
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -82,6 +86,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
               onChange={handleChange}
               className="register-input"
               required
+              minLength="3"
             />
           </div>
 
@@ -120,6 +125,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
               onChange={handleChange}
               className="register-input"
               required
+              minLength="6"
             />
           </div>
 
@@ -144,7 +150,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
         </form>
 
         <div className="register-footer">
-          <p>Already have an account? <button className="link-btn" onClick={onClose}>Login here</button></p>
+          <p>Already have an account? <button className="link-btn" onClick={onRegisterSuccess}>Login here</button></p>
         </div>
       </div>
     </div>
