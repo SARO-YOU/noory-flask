@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import Cart from './Cart'
-import AdminLogin from './admin/AdminLogin'
 import AdminDashboard from './admin/AdminDashboard'
-import DriverLogin from './admin/DriverLogin'
 import DriverDashboard from './admin/DriverDashboard'
+import UnifiedLogin from './components/UnifiedLogin'
+import ProfileMenu from './components/ProfileMenu'
+import FeedbackForm from './components/FeedbackForm'
+import DriverApplicationForm from './components/DriverApplicationForm'
 
 function App() {
   const [products, setProducts] = useState([])
@@ -12,11 +14,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [cart, setCart] = useState([])
   const [cartOpen, setCartOpen] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isDriver, setIsDriver] = useState(false)
-  const [showAdminLogin, setShowAdminLogin] = useState(false)
-  const [showDriverLogin, setShowDriverLogin] = useState(false)
-  const [driverData, setDriverData] = useState(null)
+  const [user, setUser] = useState(null)
+  const [showLogin, setShowLogin] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [showDriverApp, setShowDriverApp] = useState(false)
 
   const categories = [
     { id: 'all', name: 'All Products', icon: '🛒' },
@@ -37,10 +38,9 @@ function App() {
       console.error('Error fetching products:', error)
     }
   }
-
-  useEffect(() => {
-    fetchProducts()
-  }, [])
+useEffect(() => {
+  fetchProducts()
+}, [])
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
@@ -80,59 +80,44 @@ function App() {
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
 
-  // Show Admin Login if requested
-  if (showAdminLogin && !isAdmin) {
-    return <AdminLogin onLogin={(success) => {
-      setIsAdmin(success)
-      setShowAdminLogin(false)
-    }} />
+  const handleLoginSuccess = (userData) => {
+    setUser(userData)
+    setShowLogin(false)
   }
 
-  // Show Driver Login if requested
-  if (showDriverLogin && !isDriver) {
-    return <DriverLogin onLogin={(driver) => {
-      setIsDriver(true)
-      setDriverData(driver)
-      setShowDriverLogin(false)
-    }} />
+  const handleLogout = () => {
+    setUser(null)
   }
 
   // Show Admin Dashboard if logged in as admin
-  if (isAdmin) {
-    return <AdminDashboard onLogout={() => {
-      setIsAdmin(false)
-    }} />
-  }
-
-  // Show Driver Dashboard if logged in as driver
-  if (isDriver) {
-    return <DriverDashboard 
-      driver={driverData}
-      onLogout={() => {
-        setIsDriver(false)
-        setDriverData(null)
-      }} 
+  if (user && user.type === 'admin') {
+    return <AdminDashboard 
+      adminName={user.displayName}
+      onLogout={handleLogout} 
     />
   }
 
-  // Normal shop view
+  // Show Driver Dashboard if logged in as driver
+  if (user && user.type === 'driver') {
+    return <DriverDashboard 
+      driver={user}
+      onLogout={handleLogout}
+    />
+  }
+
+  // Normal shop view (for customers and guests)
   return (
     <div className="app">
       <header className="header">
         <h1>🛍️ NOORIY</h1>
         <div className="header-actions">
-          <button 
-            className="admin-access-btn"
-            onClick={() => setShowAdminLogin(true)}
-          >
-            🔐 Admin
-          </button>
-          <button 
-            className="driver-access-btn"
-            onClick={() => setShowDriverLogin(true)}
-          >
-            🚗 Driver
-          </button>
+          <ProfileMenu 
+            user={user}
+            onLoginClick={() => setShowLogin(true)}
+            onLogout={handleLogout}
+            onFeedbackClick={() => setShowFeedback(true)}
+            onDriverApplicationClick={() => setShowDriverApp(true)}
+          />
           <div className="cart-button" onClick={() => setCartOpen(true)}>
             🛒 Cart ({totalItems})
           </div>
@@ -192,6 +177,27 @@ function App() {
         onRemove={removeFromCart}
         onUpdateQuantity={updateQuantity}
       />
+
+      {showLogin && (
+        <UnifiedLogin 
+          onClose={() => setShowLogin(false)}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {showFeedback && (
+        <FeedbackForm 
+          onClose={() => setShowFeedback(false)}
+          user={user}
+        />
+      )}
+
+      {showDriverApp && (
+        <DriverApplicationForm 
+          onClose={() => setShowDriverApp(false)}
+          user={user}
+        />
+      )}
     </div>
   )
 }

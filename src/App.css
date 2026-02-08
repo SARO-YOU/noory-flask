@@ -44,38 +44,11 @@ body {
   align-items: center;
 }
 
-.admin-access-btn,
-.driver-access-btn {
-  padding: 10px 20px;
-  border: 2px solid white;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 14px;
-}
-
-.admin-access-btn:hover {
-  background: white;
-  color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.driver-access-btn:hover {
-  background: white;
-  color: #11998e;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .cart-button {
   padding: 10px 20px;
   background: white;
   color: #667eea;
-  border-radius: 8px;
+  border-radius: 25px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
@@ -281,8 +254,6 @@ body {
     gap: 8px;
   }
 
-  .admin-access-btn,
-  .driver-access-btn,
   .cart-button {
     padding: 8px 15px;
     font-size: 12px;
