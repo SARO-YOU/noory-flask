@@ -1,16 +1,366 @@
 # app.py - Flask backend serving React frontend
+# app.py - Flask backend serving React frontend
 
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 from products import PRODUCTS
 from datetime import datetime
-
 app = Flask(__name__, static_folder="static")
+
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://noory_db_user:uUC7vrO30xfq6cM8fLwPADR1YDG4SLGh@dpg-d642uc4hg0os73cstnl0-a.oregon-postgres.render.com/noory_db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize database
+db = SQLAlchemy(app)
 
 # Enable CORS for all routes (critical for frontend connection)
 CORS(app, resources={r"/*": {"origins": "*"}})
+# ===== DATABASE MODELS =====
 
+class Admin(db.Model):
+    __tablename__ = 'admins'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    phone = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Driver(db.Model):
+    __tablename__ = 'drivers'
+    id = db.Column(db.Integer, primary_key=True)
+    driver_number = db.Column(db.Integer, unique=True, nullable=False)  # 1, 2, 3, etc.
+    username = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(120))
+    vehicle_type = db.Column(db.String(50))
+    total_earnings = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default='active')  # active, inactive
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class DriverApplication(db.Model):
+    __tablename__ = 'driver_applications'
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    id_number = db.Column(db.String(50), nullable=False)
+    vehicle_type = db.Column(db.String(50), nullable=False)
+    vehicle_registration = db.Column(db.String(50), nullable=False)
+    license_number = db.Column(db.String(50), nullable=False)
+    experience = db.Column(db.Text)
+    availability = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Order(db.Model):
+    __tablename__ = 'orders'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.String(50), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    driver_id = db.Column(db.Integer, db.ForeignKey('drivers.id'))
+    items = db.Column(db.JSON, nullable=False)
+    total_amount = db.Column(db.Float, nullable=False)
+    delivery_fee = db.Column(db.Float, nullable=False)
+    driver_earning = db.Column(db.Float, nullable=False)
+    company_earning = db.Column(db.Float, nullable=False)
+    delivery_address = db.Column(db.String(200), nullable=False)
+    delivery_phone = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(50), default='pending')  # pending, accepted, picked_up, on_the_way, delivered, confirmed
+    payment_status = db.Column(db.String(50), default='pending')  # pending, paid
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CartItem(db.Model):
+    __tablename__ = 'cart_items'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.String(50), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    type = db.Column(db.String(50), nullable=False)  # suggestion, complaint, compliment, question
+    subject = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='new')  # new, reviewed, resolved
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # ===== AUTHENTICATION ENDPOINTS =====
+
+# User Registration
+@app.route('/api/auth/register', methods=['POST'])
+def register_user():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        phone = data.get('phone')
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            return jsonify({"error": "Username already exists"}), 400
+            
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            return jsonify({"error": "Email already exists"}), 400
+        
+        # Create new user
+        new_user = User(
+            username=username,
+            email=email,
+            password=password,  # In production, hash this!
+            phone=phone
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Registration successful",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "email": new_user.email
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+# User Login
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        ADMIN_PASSWORD = 'ITSALOTOFWORKMAN'
+        
+        # Check if admin password
+        if password == ADMIN_PASSWORD:
+            # Check if admin exists in database
+            admin = Admin.query.filter_by(username=username).first()
+            if not admin:
+                # Create admin if doesn't exist
+                admin = Admin(username=username, password=password)
+                db.session.add(admin)
+                db.session.commit()
+            
+            return jsonify({
+                "type": "admin",
+                "username": username,
+                "displayName": f"{username} - ADMIN"
+            }), 200
+        
+        # Check if driver password (DRIVER1-secret format)
+        import re
+        driver_pattern = re.match(r'^DRIVER(\d+)-(.+)$', password)
+        if driver_pattern:
+            driver_number = int(driver_pattern.group(1))
+            secret_password = driver_pattern.group(2)
+            
+            # Check if driver exists in database
+            driver = Driver.query.filter_by(driver_number=driver_number).first()
+            
+            if not driver:
+                return jsonify({"error": "Driver doesn't exist. Contact admin."}), 404
+            
+            # Check if password matches
+            if driver.password != secret_password:
+                return jsonify({"error": "Invalid password"}), 401
+            
+            return jsonify({
+                "type": "driver",
+                "username": driver.username,
+                "driverNumber": driver_number,
+                "displayName": f"{driver.username} - Driver #{driver_number}"
+            }), 200
+        
+        # Regular customer login
+        user = User.query.filter_by(username=username).first()
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        if user.password != password:
+            return jsonify({"error": "Invalid password"}), 401
+        
+        return jsonify({
+            "type": "customer",
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "displayName": user.username
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    # Save Feedback
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    try:
+        data = request.get_json()
+        
+        new_feedback = Feedback(
+            user_id=data.get('user_id'),
+            type=data.get('type'),
+            subject=data.get('subject'),
+            message=data.get('message'),
+            status='new'
+        )
+        
+        db.session.add(new_feedback)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Feedback submitted successfully",
+            "id": new_feedback.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+# Get All Feedback (for admin)
+@app.route('/api/feedback', methods=['GET'])
+def get_feedback():
+    try:
+        feedbacks = Feedback.query.order_by(Feedback.created_at.desc()).all()
+        
+        return jsonify([{
+            "id": f.id,
+            "user_id": f.user_id,
+            "type": f.type,
+            "subject": f.subject,
+            "message": f.message,
+            "status": f.status,
+            "created_at": f.created_at.isoformat()
+        } for f in feedbacks]), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# Submit Driver Application
+@app.route('/api/driver-applications', methods=['POST'])
+def submit_driver_application():
+    try:
+        data = request.get_json()
+        
+        new_application = DriverApplication(
+            full_name=data.get('fullName'),
+            phone=data.get('phone'),
+            email=data.get('email'),
+            id_number=data.get('idNumber'),
+            vehicle_type=data.get('vehicleType'),
+            vehicle_registration=data.get('vehicleRegistration'),
+            license_number=data.get('licenseNumber'),
+            experience=data.get('experience'),
+            availability=data.get('availability'),
+            status='pending'
+        )
+        
+        db.session.add(new_application)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Application submitted successfully",
+            "id": new_application.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+# Get All Driver Applications (for admin)
+@app.route('/api/driver-applications', methods=['GET'])
+def get_driver_applications():
+    try:
+        applications = DriverApplication.query.order_by(DriverApplication.created_at.desc()).all()
+        
+        return jsonify([{
+            "id": app.id,
+            "full_name": app.full_name,
+            "phone": app.phone,
+            "email": app.email,
+            "id_number": app.id_number,
+            "vehicle_type": app.vehicle_type,
+            "vehicle_registration": app.vehicle_registration,
+            "license_number": app.license_number,
+            "experience": app.experience,
+            "availability": app.availability,
+            "status": app.status,
+            "created_at": app.created_at.isoformat()
+        } for app in applications]), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# Approve Driver Application (admin only)
+@app.route('/api/driver-applications/<int:app_id>/approve', methods=['POST'])
+def approve_driver_application(app_id):
+    try:
+        application = DriverApplication.query.get(app_id)
+        
+        if not application:
+            return jsonify({"error": "Application not found"}), 404
+        
+        data = request.get_json()
+        secret_password = data.get('password')
+        
+        # Get next driver number
+        last_driver = Driver.query.order_by(Driver.driver_number.desc()).first()
+        next_driver_number = (last_driver.driver_number + 1) if last_driver else 1
+        
+        # Create new driver
+        new_driver = Driver(
+            driver_number=next_driver_number,
+            username=application.full_name,
+            password=secret_password,
+            phone=application.phone,
+            email=application.email,
+            vehicle_type=application.vehicle_type,
+            status='active'
+        )
+        
+        db.session.add(new_driver)
+        
+        # Update application status
+        application.status = 'approved'
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Driver approved successfully",
+            "driver_number": next_driver_number,
+            "driver_id": f"DRIVER{next_driver_number}"
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 # ===== In-memory storage =====
 orders_db = []
 loyalty_cards_db = []
