@@ -4,6 +4,7 @@ import Cart from './Cart'
 import AdminDashboard from './admin/AdminDashboard'
 import DriverDashboard from './admin/DriverDashboard'
 import UnifiedLogin from './components/UnifiedLogin'
+import RegisterForm from './components/RegisterForm'
 import ProfileMenu from './components/ProfileMenu'
 import FeedbackForm from './components/FeedbackForm'
 import DriverApplicationForm from './components/DriverApplicationForm'
@@ -16,6 +17,7 @@ function App() {
   const [cartOpen, setCartOpen] = useState(false)
   const [user, setUser] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
+  const [showRegister, setShowRegister] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showDriverApp, setShowDriverApp] = useState(false)
 
@@ -38,9 +40,10 @@ function App() {
       console.error('Error fetching products:', error)
     }
   }
-useEffect(() => {
-  fetchProducts()
-}, [])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
@@ -83,6 +86,11 @@ useEffect(() => {
   const handleLoginSuccess = (userData) => {
     setUser(userData)
     setShowLogin(false)
+  }
+
+  const handleRegisterSuccess = () => {
+    setShowRegister(false)
+    setShowLogin(true)
   }
 
   const handleLogout = () => {
@@ -182,6 +190,17 @@ useEffect(() => {
         <UnifiedLogin 
           onClose={() => setShowLogin(false)}
           onLoginSuccess={handleLoginSuccess}
+          onRegisterClick={() => {
+            setShowLogin(false);
+            setShowRegister(true);
+          }}
+        />
+      )}
+
+      {showRegister && (
+        <RegisterForm 
+          onClose={() => setShowRegister(false)}
+          onRegisterSuccess={handleRegisterSuccess}
         />
       )}
 

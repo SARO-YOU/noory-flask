@@ -1,3 +1,4 @@
+/* ===== GLOBAL STYLES ===== */
 * {
   margin: 0;
   padding: 0;
@@ -10,16 +11,15 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #f5f7fa;
 }
 
 .app {
   min-height: 100vh;
-  background: #f5f7fa;
-  display: flex;
-  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-/* Header */
+/* ===== HEADER ===== */
 .header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -36,43 +36,41 @@ body {
 .header h1 {
   font-size: 28px;
   font-weight: bold;
+  margin: 0;
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 15px;
 }
 
 .cart-button {
+  background: rgba(255, 255, 255, 0.2);
   padding: 10px 20px;
-  background: white;
-  color: #667eea;
   border-radius: 25px;
-  font-weight: bold;
   cursor: pointer;
+  font-weight: bold;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid white;
 }
 
 .cart-button:hover {
+  background: white;
+  color: #667eea;
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Search Bar */
+/* ===== SEARCH ===== */
 .search-container {
   padding: 20px 30px;
   background: white;
-  border-bottom: 1px solid #e0e0e0;
-  position: sticky;
-  top: 68px;
-  z-index: 99;
 }
 
 .search-input {
   width: 100%;
-  padding: 12px 20px;
+  padding: 15px 20px;
   border: 2px solid #e0e0e0;
   border-radius: 25px;
   font-size: 16px;
@@ -82,37 +80,17 @@ body {
 .search-input:focus {
   outline: none;
   border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-/* Categories */
+/* ===== CATEGORIES ===== */
 .categories {
   display: flex;
   gap: 10px;
   padding: 20px 30px;
   background: white;
-  border-bottom: 2px solid #e0e0e0;
   overflow-x: auto;
-  position: sticky;
-  top: 128px;
-  z-index: 98;
-}
-
-.categories::-webkit-scrollbar {
-  height: 6px;
-}
-
-.categories::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-.categories::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
-}
-
-.categories::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .category-btn {
@@ -124,25 +102,21 @@ body {
   border: 2px solid transparent;
   border-radius: 25px;
   cursor: pointer;
+  font-weight: 600;
   transition: all 0.3s;
   white-space: nowrap;
-  font-size: 14px;
-  font-weight: 600;
-  color: #666;
+  color: #555;
 }
 
 .category-btn:hover {
-  background: #e8eaf6;
-  border-color: #667eea;
-  color: #667eea;
+  background: #e8ebf0;
   transform: translateY(-2px);
 }
 
 .category-btn.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border-color: transparent;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  border-color: #667eea;
 }
 
 .category-icon {
@@ -153,11 +127,11 @@ body {
   font-size: 14px;
 }
 
-/* Products */
+/* ===== PRODUCTS ===== */
 .products-container {
-  flex: 1;
   padding: 30px;
-  overflow-y: auto;
+  background: #f5f7fa;
+  min-height: calc(100vh - 300px);
 }
 
 .products-grid {
@@ -170,13 +144,11 @@ body {
 
 .product-card {
   background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
 }
 
 .product-card:hover {
@@ -185,8 +157,7 @@ body {
 }
 
 .product-info {
-  padding: 20px;
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -202,7 +173,7 @@ body {
   font-size: 14px;
   color: #666;
   margin-bottom: 15px;
-  flex: 1;
+  flex-grow: 1;
   line-height: 1.5;
 }
 
@@ -224,7 +195,7 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 25px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
@@ -232,41 +203,39 @@ body {
 
 .add-to-cart-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .add-to-cart-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
-/* Mobile Responsive */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .header {
     padding: 15px 20px;
+    flex-direction: column;
+    gap: 15px;
   }
 
   .header h1 {
-    font-size: 22px;
+    font-size: 24px;
   }
 
   .header-actions {
-    gap: 8px;
-  }
-
-  .cart-button {
-    padding: 8px 15px;
-    font-size: 12px;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .search-container {
     padding: 15px 20px;
-    top: 60px;
   }
 
   .categories {
     padding: 15px 20px;
-    top: 118px;
+    gap: 8px;
   }
 
   .category-btn {
@@ -274,8 +243,12 @@ body {
     font-size: 13px;
   }
 
+  .category-icon {
+    font-size: 18px;
+  }
+
   .products-container {
-    padding: 20px;
+    padding: 20px 15px;
   }
 
   .products-grid {
@@ -284,27 +257,53 @@ body {
   }
 
   .product-card {
-    border-radius: 12px;
-  }
-
-  .product-info {
     padding: 15px;
   }
 
   .product-name {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .product-description {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .product-price {
-    font-size: 16px;
+    font-size: 18px;
   }
 
   .add-to-cart-btn {
     padding: 8px 16px;
-    font-size: 13px;
+    font-size: 14px;
   }
+}
+
+@media (max-width: 480px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-button {
+    padding: 8px 15px;
+    font-size: 14px;
+  }
+}
+
+/* ===== SCROLLBAR STYLING ===== */
+.categories::-webkit-scrollbar {
+  height: 8px;
+}
+
+.categories::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.categories::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 10px;
+}
+
+.categories::-webkit-scrollbar-thumb:hover {
+  background: #764ba2;
 }
