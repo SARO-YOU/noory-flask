@@ -50,9 +50,20 @@ function App() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchProducts()
+    
+    // Check for saved user session
+    const savedUser = localStorage.getItem('nooriy_user')
+    if (savedUser) {
+      try {
+        const userData = JSON.parse(savedUser)
+        setUser(userData)
+      } catch (err) {
+        console.error('Error loading saved session:', err)
+        localStorage.removeItem('nooriy_user')
+      }
+    }
   }, [])
 
   const filteredProducts = products.filter(product => {
@@ -94,6 +105,7 @@ function App() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   const handleLoginSuccess = (userData) => {
+    console.log('Login success, user data:', userData)
     setUser(userData)
     setShowLogin(false)
   }
@@ -105,6 +117,7 @@ function App() {
 
   const handleLogout = () => {
     setUser(null)
+    localStorage.removeItem('nooriy_user')
   }
 
   // Show loading screen
@@ -115,7 +128,7 @@ function App() {
   // Show Admin Dashboard if logged in as admin
   if (user && user.type === 'admin') {
     return <AdminDashboard 
-      adminName={user.displayName}
+      adminName={user.displayName || user.username}
       onLogout={handleLogout} 
     />
   }
