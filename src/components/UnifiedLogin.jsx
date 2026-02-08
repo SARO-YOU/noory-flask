@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import './UnifiedLogin.css';
 
-function UnifiedLogin({ onClose, onLoginSuccess }) {
+function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const ADMIN_PASSWORD = 'ITSALOTOFWORKMAN';
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!username || !password) {
@@ -16,41 +15,33 @@ function UnifiedLogin({ onClose, onLoginSuccess }) {
       return;
     }
 
-    // Check if admin password
-    if (password === ADMIN_PASSWORD) {
-      onLoginSuccess({
-        type: 'admin',
-        username: username,
-        displayName: `${username} - ADMIN`
-      });
-      return;
-    }
+    setLoading(true);
+    setError('');
 
-    // Check if driver password (format: DRIVER1-secretpass)
-    const driverPattern = /^DRIVER(\d+)-(.+)$/;
-    const driverMatch = password.match(driverPattern);
-    
-    if (driverMatch) {
-      const driverNumber = driverMatch[1];
-      const secretPassword = driverMatch[2];
-      
-      if (secretPassword.length > 0) {
-        onLoginSuccess({
-          type: 'driver',
+    try {
+      const response = await fetch('https://noory-backend.onrender.com/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           username: username,
-          driverNumber: driverNumber,
-          displayName: `${username} - Driver #${driverNumber}`
-        });
-        return;
-      }
-    }
+          password: password
+        }),
+      });
 
-    // Regular customer login
-    onLoginSuccess({
-      type: 'customer',
-      username: username,
-      displayName: username
-    });
+      const data = await response.json();
+
+      if (response.ok) {
+        onLoginSuccess(data);
+      } else {
+        setError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,14 +77,14 @@ function UnifiedLogin({ onClose, onLoginSuccess }) {
           
           {error && <p className="error-message">{error}</p>}
           
-          <button type="submit" className="login-submit-btn">
-            Login
+          <button type="submit" className="login-submit-btn" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         <div className="login-help">
-          <p>📝 Don't have an account? Just enter a username and password to create one!</p>
-          <p>🚗 Drivers: Use password format DRIVER#-yourpassword</p>
+          <p>📝 Don't have an account? <button className="link-btn" onClick={onRegisterClick}>Register here</button></p>
+          <p className="hint-text">🚗 Drivers: Use password format DRIVER#-yourpassword</p>
         </div>
       </div>
     </div>
