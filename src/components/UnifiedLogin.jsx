@@ -91,7 +91,6 @@ function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
 
         <div className="login-help">
           <p>📝 Don't have an account? <button className="link-btn" onClick={onRegisterClick}>Register here</button></p>
-          <p className="hint-text">💼 Admin password: ITSALOTOFWORKMAN</p>
           <p className="hint-text">🚗 Drivers: Get credentials from admin</p>
         </div>
       </div>

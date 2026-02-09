@@ -68,7 +68,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
   };
 
   return (
-    <div className="register-overlay" onClick={onClose}>
+    <div className="register-overlay">
       <div className="register-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>✕</button>
         
@@ -104,11 +104,11 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
           </div>
 
           <div className="input-group">
-            <label>Phone</label>
+            <label>Phone (Optional)</label>
             <input
               type="tel"
               name="phone"
-              placeholder="0712345678"
+              placeholder="0712345678 or 0110123456"
               value={formData.phone}
               onChange={handleChange}
               className="register-input"
@@ -150,7 +150,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
         </form>
 
         <div className="register-footer">
-          <p>Already have an account? <button className="link-btn" onClick={onRegisterSuccess}>Login here</button></p>
+          <p>Already have an account? <button type="button" className="link-btn" onClick={onRegisterSuccess}>Login here</button></p>
         </div>
       </div>
     </div>
