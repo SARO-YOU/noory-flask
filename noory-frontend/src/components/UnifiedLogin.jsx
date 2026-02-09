@@ -38,17 +38,17 @@ const UnifiedLogin = ({ onClose, onLoginSuccess }) => {
       localStorage.setItem('nooriy_user', JSON.stringify(adminUser));
       console.log('✅ Saved to localStorage:', localStorage.getItem('nooriy_user'));
       
-      // Call success callback
-      onLoginSuccess(adminUser);
+      // Call success callback to update state
+      if (onLoginSuccess) {
+        onLoginSuccess(adminUser);
+      }
       
-      // Close modal
-      onClose();
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        console.log('✅ Reloading page to show Admin Dashboard...');
+        window.location.href = '/'; // Force full page reload
+      }, 100);
       
-      // Force page reload to trigger App.jsx check
-      console.log('✅ Reloading page to show Admin Dashboard...');
-      window.location.reload();
-      
-      setLoading(false);
       return;
     }
 
@@ -75,13 +75,17 @@ const UnifiedLogin = ({ onClose, onLoginSuccess }) => {
         console.log('✅ Saved to localStorage:', localStorage.getItem('nooriy_user'));
         
         // Call success callback
-        onLoginSuccess(data.user);
+        if (onLoginSuccess) {
+          onLoginSuccess(data.user);
+        }
         
         // Close modal
         onClose();
         
         // Reload page
-        window.location.reload();
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       } else {
         setError(data.message || 'Invalid credentials');
         console.error('❌ Login failed:', data.message);

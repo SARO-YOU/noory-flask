@@ -179,22 +179,7 @@ def send_order_status_update_email(user_email, username, order_id, new_status):
         'cancelled': 'Your order has been cancelled'
     }
     
-    subject_text = status_messages.get(new_status, "Status Update")
-    subject = f'Order #{order_id} - {subject_text}'
-    
-    # Build status-specific message
-    if new_status == 'out_for_delivery':
-        status_detail = '<p>Your order is on its way! Our driver will contact you shortly.</p>'
-    elif new_status == 'delivered':
-        status_detail = '<p>Thank you for shopping with us! We hope you enjoy your purchase.</p>'
-    else:
-        status_detail = "<p>We'll keep you updated on your order progress.</p>"
-    
-    # Build status display
-    status_display = new_status.replace('_', ' ').upper()
-    
-    # Get status message for display
-    status_msg = status_messages.get(new_status, f'Status: {new_status}')
+    subject = f'Order #{order_id} - {status_messages.get(new_status, "Status Update")}'
     
     html_content = f'''
     <!DOCTYPE html>
@@ -219,11 +204,15 @@ def send_order_status_update_email(user_email, username, order_id, new_status):
                 
                 <p>Your order status has been updated:</p>
                 
-                <div class="status-badge">{status_display}</div>
+                <div class="status-badge">{new_status.replace('_', ' ').upper()}</div>
                 
-                <p><strong>{status_msg}</strong></p>
+                <p><strong>{status_messages.get(new_status, f'Status: {new_status}')}</strong></p>
                 
-                {status_detail}
+                {
+                    '<p>Your order is on its way! Our driver will contact you shortly.</p>' if new_status == 'out_for_delivery' 
+                    else '<p>Thank you for shopping with us! We hope you enjoy your purchase.</p>' if new_status == 'delivered'
+                    else '<p>We\'ll keep you updated on your order progress.</p>'
+                }
                 
                 <p style="margin-top: 30px;">Thank you for choosing {SHOP_NAME}!</p>
             </div>
