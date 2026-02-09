@@ -301,11 +301,230 @@ function CustomersTab() {
 }
 
 // Drivers Tab
+// Drivers Tab
 function DriversTab() {
+  const [drivers, setDrivers] = useState([
+    // Example drivers - these will come from backend
+  ]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newDriver, setNewDriver] = useState({
+    driverNumber: '',
+    name: '',
+    phone: '',
+    vehicleType: 'motorcycle',
+    vehicleReg: '',
+    secretKey: ''
+  });
+
+  const getNextDriverNumber = () => {
+    if (drivers.length === 0) return 'DRIVER1';
+    const numbers = drivers.map(d => parseInt(d.driverNumber.replace('DRIVER', '')));
+    const maxNumber = Math.max(...numbers);
+    return `DRIVER${maxNumber + 1}`;
+  };
+
+  const handleCreateDriver = async () => {
+    const driverNumber = getNextDriverNumber();
+    
+    if (!newDriver.name || !newDriver.phone || !newDriver.secretKey) {
+      alert('Please fill in all required fields!');
+      return;
+    }
+
+    if (newDriver.secretKey.length < 6) {
+      alert('Secret key must be at least 6 characters!');
+      return;
+    }
+
+    const driverData = {
+      driverNumber: driverNumber,
+      name: newDriver.name,
+      phone: newDriver.phone,
+      vehicleType: newDriver.vehicleType,
+      vehicleReg: newDriver.vehicleReg,
+      secretKey: newDriver.secretKey,
+      fullPassword: `${driverNumber}-${newDriver.secretKey}`,
+      createdAt: new Date().toISOString(),
+      totalEarnings: 0,
+      completedDeliveries: 0
+    };
+
+    try {
+      const response = await fetch('https://noory-backend.onrender.com/api/admin/drivers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(driverData)
+      });
+
+      if (response.ok) {
+        const savedDriver = await response.json();
+        setDrivers([...drivers, savedDriver]);
+        setShowCreateForm(false);
+        setNewDriver({
+          driverNumber: '',
+          name: '',
+          phone: '',
+          vehicleType: 'motorcycle',
+          vehicleReg: '',
+          secretKey: ''
+        });
+        alert(`Driver created! Login credential: ${driverNumber}-${newDriver.secretKey}`);
+      } else {
+        alert('Failed to create driver');
+      }
+    } catch (error) {
+      console.error('Error creating driver:', error);
+      alert('Network error. Please try again.');
+    }
+  };
+
+  const handleDeleteDriver = async (driverId) => {
+    if (!confirm('Are you sure you want to delete this driver?')) return;
+
+    try {
+      const response = await fetch(`https://noory-backend.onrender.com/api/admin/drivers/${driverId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setDrivers(drivers.filter(d => d.id !== driverId));
+        alert('Driver deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+    }
+  };
+
+  // Fetch drivers on mount
+  useState(() => {
+    fetch('https://noory-backend.onrender.com/api/admin/drivers')
+      .then(res => res.json())
+      .then(data => setDrivers(data))
+      .catch(err => console.error('Error fetching drivers:', err));
+  }, []);
+
   return (
-    <div>
-      <h2>🚗 Drivers</h2>
-      <p>Driver management coming next...</p>
+    <div className="drivers-tab">
+      <div className="tab-header">
+        <h2>🚗 Driver Management</h2>
+        <button 
+          className="create-driver-btn"
+          onClick={() => setShowCreateForm(!showCreateForm)}
+        >
+          {showCreateForm ? '❌ Cancel' : '➕ Create New Driver'}
+        </button>
+      </div>
+
+      {showCreateForm && (
+        <div className="create-driver-form">
+          <h3>Create New Driver Account</h3>
+          <p className="next-driver-number">Next Driver Number: <strong>{getNextDriverNumber()}</strong></p>
+
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Driver Name *</label>
+              <input
+                type="text"
+                placeholder="Full name"
+                value={newDriver.name}
+                onChange={(e) => setNewDriver({...newDriver, name: e.target.value})}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Phone Number *</label>
+              <input
+                type="tel"
+                placeholder="0712345678"
+                value={newDriver.phone}
+                onChange={(e) => setNewDriver({...newDriver, phone: e.target.value})}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Vehicle Type *</label>
+              <select
+                value={newDriver.vehicleType}
+                onChange={(e) => setNewDriver({...newDriver, vehicleType: e.target.value})}
+              >
+                <option value="motorcycle">🏍️ Motorcycle</option>
+                <option value="car">🚗 Car</option>
+                <option value="bicycle">🚲 Bicycle</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Vehicle Registration</label>
+              <input
+                type="text"
+                placeholder="KAA 123B"
+                value={newDriver.vehicleReg}
+                onChange={(e) => setNewDriver({...newDriver, vehicleReg: e.target.value})}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Driver's Secret Key * (min 6 characters)</label>
+              <input
+                type="text"
+                placeholder="Driver creates their own password"
+                value={newDriver.secretKey}
+                onChange={(e) => setNewDriver({...newDriver, secretKey: e.target.value})}
+              />
+              <small>This will be used after the hyphen: {getNextDriverNumber()}-secretkey</small>
+            </div>
+          </div>
+
+          <button className="save-driver-btn" onClick={handleCreateDriver}>
+            💾 Create Driver Account
+          </button>
+        </div>
+      )}
+
+      <div className="drivers-list">
+        <h3>All Drivers ({drivers.length})</h3>
+        
+        {drivers.length === 0 ? (
+          <div className="empty-state">
+            <p>No drivers yet. Create your first driver account!</p>
+          </div>
+        ) : (
+          <div className="drivers-grid">
+            {drivers.map(driver => (
+              <div key={driver.id} className="driver-card">
+                <div className="driver-header">
+                  <h4>{driver.name}</h4>
+                  <span className="driver-badge">{driver.driverNumber}</span>
+                </div>
+
+                <div className="driver-info">
+                  <p>📱 {driver.phone}</p>
+                  <p>🚗 {driver.vehicleType} {driver.vehicleReg && `- ${driver.vehicleReg}`}</p>
+                  <p>🔑 Login: <code>{driver.fullPassword}</code></p>
+                </div>
+
+                <div className="driver-stats">
+                  <div className="stat">
+                    <span className="stat-label">Deliveries:</span>
+                    <span className="stat-value">{driver.completedDeliveries || 0}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Earnings:</span>
+                    <span className="stat-value">KSh {driver.totalEarnings || 0}</span>
+                  </div>
+                </div>
+
+                <button 
+                  className="delete-driver-btn"
+                  onClick={() => handleDeleteDriver(driver.id)}
+                >
+                  🗑️ Delete Driver
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
