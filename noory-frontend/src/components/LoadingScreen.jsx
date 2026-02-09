@@ -15,7 +15,6 @@ function LoadingScreen() {
   const handleIconTouch = (iconId) => {
     setTouchedIcons(prev => new Set([...prev, iconId]));
     
-    // Reset after animation completes
     setTimeout(() => {
       setTouchedIcons(prev => {
         const newSet = new Set(prev);
@@ -28,6 +27,7 @@ function LoadingScreen() {
   const icons = [
     { id: 'cart', emoji: '🛒', class: 'cart' },
     { id: 'bike', emoji: '🏍️', class: 'bike' },
+    { id: 'rider', emoji: '🧑', class: 'rider' },
     { id: 'food1', emoji: '🍕', class: 'food1' },
     { id: 'food2', emoji: '🍔', class: 'food2' },
     { id: 'food3', emoji: '🥤', class: 'food3' },
@@ -39,17 +39,16 @@ function LoadingScreen() {
   return (
     <div className="loading-screen">
       <div className="loading-content">
-        <h1 className="loading-title">🛒 NOOREY</h1>
+        <h1 className="loading-title">🛍️ NOORIY</h1>
         <p className="loading-text">Loading your shopping experience{dots}</p>
         
-        <div className="loading-spinner">
-          <div className="spinner-ring"></div>
-          <div className="spinner-ring"></div>
-          <div className="spinner-ring"></div>
+        <div className="loading-dots">
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
         </div>
       </div>
 
-      {/* Floating animations with touch interaction */}
       <div className="floating-icons">
         {icons.map(icon => (
           <div

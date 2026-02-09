@@ -2,81 +2,57 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import Cart from './Cart'
 import AdminDashboard from './admin/AdminDashboard'
-import DriverDashboard from './admin/DriverDashboard'
 import UnifiedLogin from './components/UnifiedLogin'
-import RegisterForm from './components/RegisterForm'
-import ProfileMenu from './components/ProfileMenu'
-import FeedbackForm from './components/FeedbackForm'
-import DriverApplicationForm from './components/DriverApplicationForm'
 import LoadingScreen from './components/LoadingScreen'
 
 function App() {
   const [products, setProducts] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
   const [cart, setCart] = useState([])
-  const [cartOpen, setCartOpen] = useState(false)
-  const [user, setUser] = useState(null)
+  const [showCart, setShowCart] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState('all')
   const [showLogin, setShowLogin] = useState(false)
-  const [showRegister, setShowRegister] = useState(false)
-  const [showFeedback, setShowFeedback] = useState(false)
-  const [showDriverApp, setShowDriverApp] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const categories = [
-    { id: 'all', name: 'All Products', icon: '🛒' },
-    { id: 'dairy', name: 'Dairy', icon: '🥛' },
-    { id: 'pantry', name: 'Pantry', icon: '🌾' },
-    { id: 'beverages', name: 'Beverages', icon: '🥤' },
-    { id: 'snacks', name: 'Snacks', icon: '🍪' },
-    { id: 'personal_care', name: 'Personal Care', icon: '🧴' },
-    { id: 'household', name: 'Household', icon: '🧹' }
-  ]
-
+  // Fetch products from backend
   const fetchProducts = async () => {
     try {
-      setIsLoading(true)
       const response = await fetch('https://noory-backend.onrender.com/api/products')
       const data = await response.json()
       setProducts(data)
-      
-      // Minimum loading time for better UX (2 seconds)
-      setTimeout(() => {
-        setIsLoading(false)
-      }, 2000)
     } catch (error) {
       console.error('Error fetching products:', error)
-      setIsLoading(false)
     }
   }
 
+  // Initialize app
   useEffect(() => {
-  // Fetch products on mount
-  const loadProducts = async () => {
-    await fetchProducts();
-  };
-  loadProducts();
-  
-  // Check for saved user session
-  const savedUser = localStorage.getItem('nooriy_user')
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser)
-        setUser(userData)
-      } catch (err) {
-        console.error('Error loading saved session:', err)
-        localStorage.removeItem('nooriy_user')
+    const initializeApp = async () => {
+      // Fetch products
+      await fetchProducts()
+      
+      // Check for saved user session
+      const savedUser = localStorage.getItem('nooriy_user')
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser)
+          setUser(userData)
+        } catch (err) {
+          console.error('Error loading saved session:', err)
+          localStorage.removeItem('nooriy_user')
+        }
       }
+      
+      // Minimum loading time for smooth UX (2 seconds)
+      setTimeout(() => {
+        setLoading(false)
+      }, 2000)
     }
+    
+    initializeApp()
   }, [])
 
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
-
+  // Add to cart
   const addToCart = (product) => {
     const existingItem = cart.find(item => item.id === product.id)
     if (existingItem) {
@@ -90,13 +66,10 @@ function App() {
     }
   }
 
-  const removeFromCart = (productId) => {
-    setCart(cart.filter(item => item.id !== productId))
-  }
-
-  const updateQuantity = (productId, newQuantity) => {
-    if (newQuantity === 0) {
-      removeFromCart(productId)
+  // Update cart quantity
+  const updateCartQuantity = (productId, newQuantity) => {
+    if (newQuantity <= 0) {
+      setCart(cart.filter(item => item.id !== productId))
     } else {
       setCart(cart.map(item =>
         item.id === productId
@@ -106,150 +79,200 @@ function App() {
     }
   }
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
+  // Remove from cart
+  const removeFromCart = (productId) => {
+    setCart(cart.filter(item => item.id !== productId))
+  }
 
-  const handleLoginSuccess = (userData) => {
-    console.log('Login success, user data:', userData)
+  // Calculate total
+  const calculateTotal = () => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  }
+
+  // Handle checkout
+  const handleCheckout = async (deliveryInfo) => {
+    try {
+      const orderData = {
+        user_id: user?.id || null,
+        items: cart,
+        total: calculateTotal(),
+        delivery_info: deliveryInfo,
+        payment_method: deliveryInfo.paymentMethod
+      }
+
+      const response = await fetch('https://noory-backend.onrender.com/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      })
+
+      if (response.ok) {
+        const order = await response.json()
+        alert(`Order placed successfully! Order ID: ${order.order_id}`)
+        setCart([])
+        setShowCart(false)
+      }
+    } catch (error) {
+      console.error('Error placing order:', error)
+      alert('Failed to place order. Please try again.')
+    }
+  }
+
+  // Handle login
+  const handleLogin = (userData) => {
     setUser(userData)
+    localStorage.setItem('nooriy_user', JSON.stringify(userData))
     setShowLogin(false)
   }
 
-  const handleRegisterSuccess = () => {
-    setShowRegister(false)
-    setShowLogin(true)
-  }
-
+  // Handle logout
   const handleLogout = () => {
     setUser(null)
     localStorage.removeItem('nooriy_user')
   }
 
-  // Show loading screen
-  if (isLoading) {
-    return <LoadingScreen />
+  // Filter products by category
+  const filteredProducts = selectedCategory === 'all'
+    ? products
+    : products.filter(p => p.category === selectedCategory)
+
+  // Show admin dashboard if user is admin
+  if (user?.role === 'admin') {
+    return <AdminDashboard onLogout={handleLogout} />
   }
 
-  // Show Admin Dashboard if logged in as admin
-  if (user && user.type === 'admin') {
-    return <AdminDashboard 
-      adminName={user.displayName || user.username}
-      onLogout={handleLogout} 
-    />
-  }
-
-  // Show Driver Dashboard if logged in as driver
-  if (user && user.type === 'driver') {
-    return <DriverDashboard 
-      driver={user}
-      onLogout={handleLogout}
-    />
-  }
-
-  // Normal shop view (for customers and guests)
   return (
-    <div className="app">
-      <header className="header">
-        <h1>🛍️ NOORIY</h1>
-        <div className="header-actions">
-          <ProfileMenu 
-            user={user}
-            onLoginClick={() => setShowLogin(true)}
-            onLogout={handleLogout}
-            onFeedbackClick={() => setShowFeedback(true)}
-            onDriverApplicationClick={() => setShowDriverApp(true)}
-          />
-          <div className="cart-button" onClick={() => setCartOpen(true)}>
-            🛒 Cart ({totalItems})
+    <>
+      {/* Beautiful Loading Screen */}
+      {loading && <LoadingScreen />}
+      
+      {/* Main App */}
+      <div className="app">
+        {/* Header */}
+        <header className="header">
+          <div className="header-content">
+            <h1 className="logo">🛍️ NOORIY</h1>
+            <div className="header-actions">
+              {user ? (
+                <div className="user-menu">
+                  <span className="user-name">👤 {user.username}</span>
+                  <button onClick={handleLogout} className="logout-btn">Logout</button>
+                </div>
+              ) : (
+                <button onClick={() => setShowLogin(true)} className="login-btn">
+                  👤 Profile
+                </button>
+              )}
+              <button onClick={() => setShowCart(true)} className="cart-btn">
+                🛒 Cart ({cart.length})
+              </button>
+            </div>
           </div>
+        </header>
+
+        {/* Search Bar */}
+        <div className="search-container">
+          <input
+            type="text"
+            placeholder="🔍 Search products..."
+            className="search-bar"
+          />
         </div>
-      </header>
 
-      <div className="search-container">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="🔍 Search products..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      <div className="categories">
-        {categories.map(category => (
+        {/* Category Filter */}
+        <div className="category-filter">
           <button
-            key={category.id}
-            className={`category-btn ${selectedCategory === category.id ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category.id)}
+            className={selectedCategory === 'all' ? 'active' : ''}
+            onClick={() => setSelectedCategory('all')}
           >
-            <span className="category-icon">{category.icon}</span>
-            <span className="category-name">{category.name}</span>
+            🛒 All Products
           </button>
-        ))}
-      </div>
+          <button
+            className={selectedCategory === 'dairy' ? 'active' : ''}
+            onClick={() => setSelectedCategory('dairy')}
+          >
+            🥛 Dairy
+          </button>
+          <button
+            className={selectedCategory === 'pantry' ? 'active' : ''}
+            onClick={() => setSelectedCategory('pantry')}
+          >
+            🌾 Pantry
+          </button>
+          <button
+            className={selectedCategory === 'beverages' ? 'active' : ''}
+            onClick={() => setSelectedCategory('beverages')}
+          >
+            🥤 Beverages
+          </button>
+          <button
+            className={selectedCategory === 'snacks' ? 'active' : ''}
+            onClick={() => setSelectedCategory('snacks')}
+          >
+            🍪 Snacks
+          </button>
+          <button
+            className={selectedCategory === 'personal_care' ? 'active' : ''}
+            onClick={() => setSelectedCategory('personal_care')}
+          >
+            🧴 Personal Care
+          </button>
+          <button
+            className={selectedCategory === 'household' ? 'active' : ''}
+            onClick={() => setSelectedCategory('household')}
+          >
+            🧹 Household
+          </button>
+        </div>
 
-      <div className="products-container">
+        {/* Products Grid */}
         <div className="products-grid">
           {filteredProducts.map(product => (
             <div key={product.id} className="product-card">
-              <div className="product-info">
-                <h3 className="product-name">{product.name}</h3>
-                <p className="product-description">{product.description}</p>
-                <div className="product-footer">
-                  <span className="product-price">KSh {product.price}</span>
-                  <button
-                    className="add-to-cart-btn"
-                    onClick={() => addToCart(product)}
-                    disabled={!product.in_stock}
-                  >
-                    {product.in_stock ? '+ Add' : 'Out of Stock'}
-                  </button>
-                </div>
+              <div className="product-image-container">
+                {product.image_url ? (
+                  <img src={product.image_url} alt={product.name} className="product-image" />
+                ) : (
+                  <div className="product-placeholder">📦</div>
+                )}
+              </div>
+              <h3 className="product-name">{product.name}</h3>
+              <p className="product-description">{product.description}</p>
+              <div className="product-footer">
+                <span className="product-price">KSh {product.price}</span>
+                <button
+                  onClick={() => addToCart(product)}
+                  className="add-to-cart-btn"
+                  disabled={!product.in_stock}
+                >
+                  {product.in_stock ? '+ Add' : 'Out of Stock'}
+                </button>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Cart Modal */}
+        {showCart && (
+          <Cart
+            cart={cart}
+            onClose={() => setShowCart(false)}
+            onUpdateQuantity={updateCartQuantity}
+            onRemove={removeFromCart}
+            onCheckout={handleCheckout}
+            total={calculateTotal()}
+          />
+        )}
+
+        {/* Login Modal */}
+        {showLogin && (
+          <UnifiedLogin
+            onClose={() => setShowLogin(false)}
+            onLogin={handleLogin}
+          />
+        )}
       </div>
-<Cart
-  cart={cart}
-  isOpen={cartOpen}
-  onClose={() => setCartOpen(false)}
-  onRemove={removeFromCart}
-  onUpdateQuantity={updateQuantity}
-  user={user}
-/>
-
-      {showLogin && (
-        <UnifiedLogin 
-          onClose={() => setShowLogin(false)}
-          onLoginSuccess={handleLoginSuccess}
-          onRegisterClick={() => {
-            setShowLogin(false);
-            setShowRegister(true);
-          }}
-        />
-      )}
-
-      {showRegister && (
-        <RegisterForm 
-          onClose={() => setShowRegister(false)}
-          onRegisterSuccess={handleRegisterSuccess}
-        />
-      )}
-
-      {showFeedback && (
-        <FeedbackForm 
-          onClose={() => setShowFeedback(false)}
-          user={user}
-        />
-      )}
-
-      {showDriverApp && (
-        <DriverApplicationForm 
-          onClose={() => setShowDriverApp(false)}
-          user={user}
-        />
-      )}
-    </div>
+    </>
   )
 }
 

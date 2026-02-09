@@ -14,200 +14,88 @@
 
 .loading-content {
   text-align: center;
+  color: white;
   z-index: 2;
-  position: relative;
 }
 
 .loading-title {
   font-size: 48px;
-  color: white;
+  font-weight: 800;
   margin-bottom: 20px;
-  font-weight: bold;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
 }
 
 .loading-text {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 30px;
-  min-height: 30px;
+  opacity: 0.9;
 }
 
-/* Spinner */
-.loading-spinner {
+/* Bouncing Dots */
+.loading-dots {
   display: flex;
   justify-content: center;
   gap: 10px;
 }
 
-.spinner-ring {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
+.dot {
+  width: 12px;
+  height: 12px;
   background: white;
-  animation: bounce 1.4s ease-in-out infinite;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.spinner-ring:nth-child(1) {
+.dot:nth-child(1) {
   animation-delay: -0.32s;
 }
 
-.spinner-ring:nth-child(2) {
+.dot:nth-child(2) {
   animation-delay: -0.16s;
 }
 
 @keyframes bounce {
   0%, 80%, 100% {
     transform: scale(0);
-    opacity: 0.5;
   }
   40% {
     transform: scale(1);
-    opacity: 1;
   }
 }
 
-/* Floating Icons Container */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Floating Icons */
 .floating-icons {
   position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
+  top: 0;
+  left: 0;
   pointer-events: none;
 }
 
 .float-item {
   position: absolute;
   font-size: 40px;
+  pointer-events: auto;
   cursor: pointer;
-  pointer-events: all;
   transition: transform 0.3s ease;
-  user-select: none;
 }
 
-/* Bike with delivery person - moves LEFT to RIGHT */
-.float-item.bike {
-  bottom: 25%;
-  left: -100px;
-  animation: bikeMove 8s linear infinite;
+.float-item:hover {
+  transform: scale(1.2);
 }
 
-.float-item.bike::before {
-  content: '🧑';
-  position: absolute;
-  top: -15px;
-  left: 5px;
-  font-size: 25px;
-}
-
-@keyframes bikeMove {
-  0% {
-    left: -100px;
-  }
-  100% {
-    left: calc(100% + 100px);
-  }
-}
-
-/* Cart - moves RIGHT to LEFT */
-.float-item.cart {
-  bottom: 25%;
-  right: -100px;
-  animation: cartMove 10s linear infinite;
-}
-
-@keyframes cartMove {
-  0% {
-    right: -100px;
-  }
-  100% {
-    right: calc(100% + 100px);
-  }
-}
-
-/* Food items - wiggle/shake in random positions */
-.float-item.food1 {
-  top: 15%;
-  left: 20%;
-  animation: wiggle1 3s ease-in-out infinite;
-}
-
-.float-item.food2 {
-  top: 25%;
-  right: 25%;
-  animation: wiggle2 2.5s ease-in-out infinite;
-}
-
-.float-item.food3 {
-  top: 60%;
-  left: 15%;
-  animation: wiggle3 3.5s ease-in-out infinite;
-}
-
-.float-item.food4 {
-  top: 70%;
-  right: 20%;
-  animation: wiggle4 2.8s ease-in-out infinite;
-}
-
-.float-item.food5 {
-  top: 40%;
-  left: 10%;
-  animation: wiggle5 3.2s ease-in-out infinite;
-}
-
-.float-item.bag {
-  top: 50%;
-  right: 15%;
-  animation: wiggle6 2.9s ease-in-out infinite;
-}
-
-/* Wiggle animations */
-@keyframes wiggle1 {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-10px, -10px) rotate(-5deg); }
-  50% { transform: translate(10px, 5px) rotate(5deg); }
-  75% { transform: translate(-5px, 10px) rotate(-3deg); }
-}
-
-@keyframes wiggle2 {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(8px, -8px) rotate(4deg); }
-  66% { transform: translate(-8px, 8px) rotate(-4deg); }
-}
-
-@keyframes wiggle3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(0, -15px) scale(1.1); }
-}
-
-@keyframes wiggle4 {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(12px, 8px) rotate(6deg); }
-  75% { transform: translate(-12px, -8px) rotate(-6deg); }
-}
-
-@keyframes wiggle5 {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(10px, -20px); }
-}
-
-@keyframes wiggle6 {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  33% { transform: rotate(10deg) scale(1.05); }
-  66% { transform: rotate(-10deg) scale(0.95); }
-}
-
-/* Touch effect - float up and come back down */
 .float-item.touched {
-  animation: floatUp 1s ease-in-out !important;
+  animation: floatUp 1s ease-out;
 }
 
 @keyframes floatUp {
@@ -215,28 +103,125 @@
     transform: translateY(0) scale(1);
   }
   50% {
-    transform: translateY(-100px) scale(1.2) rotate(10deg);
+    transform: translateY(-100px) scale(1.5);
   }
   100% {
-    transform: translateY(0) scale(1) rotate(0deg);
+    transform: translateY(0) scale(1);
   }
 }
 
-/* Mobile responsive */
+/* Cart - Moving Right to Left */
+.cart {
+  top: 15%;
+  left: -60px;
+  animation: moveLeftToRight 8s linear infinite;
+}
+
+@keyframes moveLeftToRight {
+  from {
+    left: -60px;
+  }
+  to {
+    left: 110%;
+  }
+}
+
+/* Bike - Moving Left to Right */
+.bike {
+  top: 70%;
+  right: -60px;
+  animation: moveRightToLeft 10s linear infinite;
+}
+
+@keyframes moveRightToLeft {
+  from {
+    right: -60px;
+  }
+  to {
+    right: 110%;
+  }
+}
+
+/* Rider - Following Bike */
+.rider {
+  top: 70%;
+  right: -90px;
+  animation: moveRiderWithBike 10s linear infinite;
+}
+
+@keyframes moveRiderWithBike {
+  from {
+    right: -90px;
+  }
+  to {
+    right: 110%;
+  }
+}
+
+/* Food Items - Wiggling and Shaking */
+.food1 {
+  top: 20%;
+  left: 10%;
+  animation: wiggle 3s ease-in-out infinite;
+}
+
+.food2 {
+  top: 30%;
+  right: 15%;
+  animation: wiggle 2.5s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+.food3 {
+  bottom: 25%;
+  left: 20%;
+  animation: wiggle 3.2s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.food4 {
+  top: 50%;
+  right: 10%;
+  animation: wiggle 2.8s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+.food5 {
+  bottom: 15%;
+  right: 25%;
+  animation: wiggle 3.5s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.bag {
+  top: 40%;
+  left: 8%;
+  animation: wiggle 2.6s ease-in-out infinite;
+  animation-delay: 0.8s;
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-5deg) translateY(0);
+  }
+  25% {
+    transform: rotate(5deg) translateY(-10px);
+  }
+  50% {
+    transform: rotate(-5deg) translateY(0);
+  }
+  75% {
+    transform: rotate(5deg) translateY(10px);
+  }
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .loading-title {
     font-size: 36px;
   }
-
-  .loading-text {
-    font-size: 14px;
-  }
-
+  
   .float-item {
     font-size: 30px;
-  }
-
-  .float-item.bike::before {
-    font-size: 20px;
   }
 }
