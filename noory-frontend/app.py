@@ -4,6 +4,14 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from products import PRODUCTS
 from datetime import datetime
+import logging
+
+# Suppress Flask startup banner and Render messages
+import sys
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+cli = sys.modules['flask.cli']
+cli.show_server_banner = lambda *x: None
 
 app = Flask(__name__, static_folder="static")
 
@@ -27,6 +35,67 @@ def get_product(product_id):
     if product:
         return jsonify(product)
     return jsonify({"error": "Product not found"}), 404
+
+# ===== ADMIN PRODUCT MANAGEMENT =====
+@app.route('/api/admin/products', methods=['POST'])
+def add_product():
+    try:
+        data = request.get_json()
+        
+        # Generate new product ID
+        max_id = max([int(p['id']) for p in PRODUCTS], default=0)
+        new_product = {
+            "id": str(max_id + 1),
+            "name": data['name'],
+            "description": data.get('description', ''),
+            "price": data['price'],
+            "category": data['category'],
+            "in_stock": data.get('in_stock', True),
+            "image_url": data.get('image_url', '')
+        }
+        
+        PRODUCTS.append(new_product)
+        return jsonify(new_product), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/admin/products/<product_id>', methods=['PUT'])
+def update_product(product_id):
+    try:
+        data = request.get_json()
+        product = next((p for p in PRODUCTS if p['id'] == product_id), None)
+        
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        
+        # Update product fields
+        product['name'] = data.get('name', product['name'])
+        product['description'] = data.get('description', product['description'])
+        product['price'] = data.get('price', product['price'])
+        product['category'] = data.get('category', product['category'])
+        product['in_stock'] = data.get('in_stock', product['in_stock'])
+        product['image_url'] = data.get('image_url', product.get('image_url', ''))
+        
+        return jsonify(product), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/admin/products/<product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    try:
+        global PRODUCTS
+        product = next((p for p in PRODUCTS if p['id'] == product_id), None)
+        
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        
+        PRODUCTS = [p for p in PRODUCTS if p['id'] != product_id]
+        return jsonify({"message": "Product deleted successfully"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 # ===== ORDERS =====
 @app.route('/api/orders', methods=['POST'])
@@ -340,4 +409,5 @@ def serve_react(path):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 NOORIY Backend starting on port {port}...")
     app.run(host='0.0.0.0', port=port, debug=False)

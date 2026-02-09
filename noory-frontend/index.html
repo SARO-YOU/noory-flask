@@ -2,12 +2,125 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Noorey Shop</title>
+    <title>NOORIY - Online Grocery Store</title>
+    
+    <style>
+      /* Inline loading screen that shows immediately */
+      #initial-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+      }
+
+      #initial-loading.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+      }
+
+      .loading-logo {
+        font-size: 80px;
+        margin-bottom: 30px;
+        animation: bounce 1s ease-in-out infinite;
+      }
+
+      .loading-title {
+        font-size: 48px;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 20px;
+        letter-spacing: 2px;
+      }
+
+      .loading-subtitle {
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 40px;
+      }
+
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 6px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes bounce {
+        0%, 100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Hide the root initially */
+      #root {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+
+      #root.loaded {
+        opacity: 1;
+      }
+    </style>
   </head>
   <body>
+    <!-- Immediate loading screen (shows before React loads) -->
+    <div id="initial-loading">
+      <div class="loading-logo">🛍️</div>
+      <h1 class="loading-title">NOORIY</h1>
+      <p class="loading-subtitle">Loading your shopping experience...</p>
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- React root -->
     <div id="root"></div>
+
     <script type="module" src="/src/main.jsx"></script>
+    
+    <script>
+      // Hide initial loading screen once React has loaded
+      window.addEventListener('load', () => {
+        // Wait for React to fully render
+        const checkReactLoaded = setInterval(() => {
+          const root = document.getElementById('root');
+          if (root && root.children.length > 0) {
+            clearInterval(checkReactLoaded);
+            
+            setTimeout(() => {
+              const initialLoading = document.getElementById('initial-loading');
+              if (initialLoading) {
+                initialLoading.classList.add('hidden');
+              }
+              if (root) {
+                root.classList.add('loaded');
+              }
+            }, 500);
+          }
+        }, 100);
+      });
+    </script>
   </body>
 </html>

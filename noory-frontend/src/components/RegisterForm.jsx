@@ -17,19 +17,25 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError('');
+    setError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation
+    if (!formData.username || !formData.email || !formData.password) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError('Password must be at least 6 characters long');
       return;
     }
 
@@ -54,7 +60,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
 
       if (response.ok) {
         // Registration successful
-        alert('Account created successfully! Please login.');
+        alert('Registration successful! Please login.');
         onRegisterSuccess();
       } else {
         setError(data.error || 'Registration failed');
@@ -68,7 +74,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
   };
 
   return (
-    <div className="register-overlay">
+    <div className="register-overlay" onClick={onClose}>
       <div className="register-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>✕</button>
         
@@ -86,7 +92,6 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
               onChange={handleChange}
               className="register-input"
               required
-              minLength="3"
             />
           </div>
 
@@ -95,7 +100,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
             <input
               type="email"
               name="email"
-              placeholder="your@email.com"
+              placeholder="your.email@example.com"
               value={formData.email}
               onChange={handleChange}
               className="register-input"
@@ -108,7 +113,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
             <input
               type="tel"
               name="phone"
-              placeholder="0712345678 or 0110123456"
+              placeholder="+254 712 345 678"
               value={formData.phone}
               onChange={handleChange}
               className="register-input"
@@ -125,7 +130,6 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
               onChange={handleChange}
               className="register-input"
               required
-              minLength="6"
             />
           </div>
 
@@ -134,7 +138,7 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
             <input
               type="password"
               name="confirmPassword"
-              placeholder="Re-enter password"
+              placeholder="Re-enter your password"
               value={formData.confirmPassword}
               onChange={handleChange}
               className="register-input"
@@ -145,12 +149,12 @@ function RegisterForm({ onClose, onRegisterSuccess }) {
           {error && <p className="error-message">{error}</p>}
           
           <button type="submit" className="register-submit-btn" disabled={loading}>
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading ? 'Creating Account...' : 'Register'}
           </button>
         </form>
 
-        <div className="register-footer">
-          <p>Already have an account? <button type="button" className="link-btn" onClick={onRegisterSuccess}>Login here</button></p>
+        <div className="register-help">
+          <p>Already have an account? <button className="link-btn" onClick={onClose}>Login here</button></p>
         </div>
       </div>
     </div>

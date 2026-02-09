@@ -1,417 +1,329 @@
 # app.py - Flask backend serving React frontend
 import os
+import logging
+import sys
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from products import PRODUCTS
-import copy
 from datetime import datetime
+
+# Suppress Flask startup banner and Render messages
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+cli = sys.modules['flask.cli']
+cli.show_server_banner = lambda *x: None
 
 app = Flask(__name__, static_folder="static")
 
-# Enable CORS for all routes (crucial for Vercel frontend)
+# Enable CORS for all routes (crucial for frontend-backend communication)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# ===== In-memory storage =====
-# ===== In-memory storage =====
-orders_db = []
-loyalty_cards_db = []
+# In-memory data storage (replace with database in production)
 users_db = []
-drivers_db = []  # Store drivers here
-products_db = copy.deepcopy(PRODUCTS)  # Mutable product list
+orders_db = []
+drivers_db = []
 
-# ===== PRODUCTS =====
-# ===== PRODUCTS =====
-@app.route('/api/products', methods=['GET'])
-def get_products():
-    return jsonify(products_db)
+# Admin credentials (hardcoded for now)
+ADMIN_CREDENTIALS = {
+    "username": "admin",
+    "password": "admin123"
+}
 
-@app.route('/api/products/<product_id>', methods=['GET'])
-def get_product(product_id):
-    product = next((p for p in products_db if p['id'] == product_id), None)
-    if product:
-        return jsonify(product)
-    return jsonify({"error": "Product not found"}), 404
+# ============================================
+# AUTHENTICATION ROUTES
+# ============================================
 
-# ===== ADMIN PRODUCT MANAGEMENT =====
-@app.route('/api/admin/products', methods=['POST'])
-def add_product():
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        if not data.get('name') or not data.get('price'):
-            return jsonify({"error": "Name and price are required"}), 400
-        
-        # Generate new product ID
-        existing_ids = [int(p['id']) for p in products_db]
-        new_id = str(max(existing_ids) + 1) if existing_ids else "1"
-        
-        # Create new product
-        new_product = {
-            "id": new_id,
-            "name": data['name'],
-            "description": data.get('description', ''),
-            "price": float(data['price']),
-            "category": data.get('category', 'pantry'),
-            "in_stock": data.get('in_stock', True),
-            "image_url": data.get('image_url', '')
-        }
-        
-        products_db.append(new_product)
-        
-        return jsonify(new_product), 201
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-@app.route('/api/admin/products/<product_id>', methods=['PUT'])
-def update_product(product_id):
-    try:
-        data = request.get_json()
-        product = next((p for p in products_db if p['id'] == product_id), None)
-        
-        if not product:
-            return jsonify({"error": "Product not found"}), 404
-        
-        # Update product fields
-        product['name'] = data.get('name', product['name'])
-        product['description'] = data.get('description', product['description'])
-        product['price'] = float(data.get('price', product['price']))
-        product['category'] = data.get('category', product['category'])
-        product['in_stock'] = data.get('in_stock', product['in_stock'])
-        product['image_url'] = data.get('image_url', product.get('image_url', ''))
-        
-        return jsonify(product), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-@app.route('/api/admin/products/<product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    try:
-        global products_db
-        product = next((p for p in products_db if p['id'] == product_id), None)
-        
-        if not product:
-            return jsonify({"error": "Product not found"}), 404
-        
-        products_db = [p for p in products_db if p['id'] != product_id]
-        
-        return jsonify({"message": "Product deleted successfully"}), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-# ===== ORDERS =====
-@app.route('/api/orders', methods=['POST'])
-def create_order():
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['customer_name', 'phone', 'address', 'items', 'total', 'delivery_zone']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-        
-        # Create order
-        order = {
-            "order_id": f"ORD-{len(orders_db) + 1:05d}",
-            "customer_name": data['customer_name'],
-            "phone": data['phone'],
-            "address": data['address'],
-            "delivery_zone": data['delivery_zone'],
-            "items": data['items'],
-            "subtotal": data.get('subtotal', 0),
-            "delivery_fee": data.get('delivery_fee', 0),
-            "total": data['total'],
-            "payment_method": data.get('payment_method', 'mpesa'),
-            "status": "pending",
-            "created_at": datetime.now().isoformat(),
-            "driver_assigned": None,
-            "delivery_notes": data.get('delivery_notes', '')
-        }
-        
-        orders_db.append(order)
-        
-        return jsonify({
-            "message": "Order created successfully",
-            "order": order
-        }), 201
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-@app.route('/api/orders', methods=['GET'])
-def get_orders():
-    return jsonify(orders_db)
-
-@app.route('/api/orders/<order_id>', methods=['GET'])
-def get_order(order_id):
-    order = next((o for o in orders_db if o['order_id'] == order_id), None)
-    if order:
-        return jsonify(order)
-    return jsonify({"error": "Order not found"}), 404
-
-@app.route('/api/orders/<order_id>/status', methods=['PUT'])
-def update_order_status(order_id):
-    try:
-        data = request.get_json()
-        order = next((o for o in orders_db if o['order_id'] == order_id), None)
-        
-        if not order:
-            return jsonify({"error": "Order not found"}), 404
-        
-        order['status'] = data.get('status', order['status'])
-        order['driver_assigned'] = data.get('driver_assigned', order['driver_assigned'])
-        
-        return jsonify({"message": "Order updated", "order": order})
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-# ===== LOYALTY CARDS =====
-@app.route('/api/loyalty/card', methods=['POST'])
-def create_loyalty_card():
-    try:
-        data = request.get_json()
-        
-        # Check if card already exists for this phone
-        existing_card = next((c for c in loyalty_cards_db if c['phone'] == data['phone']), None)
-        if existing_card:
-            return jsonify({"error": "Loyalty card already exists for this phone"}), 400
-        
-        card = {
-            "card_id": f"CARD-{len(loyalty_cards_db) + 1:05d}",
-            "customer_name": data['customer_name'],
-            "phone": data['phone'],
-            "points": 0,
-            "tier": "Bronze",
-            "created_at": datetime.now().isoformat()
-        }
-        
-        loyalty_cards_db.append(card)
-        
-        return jsonify(card), 201
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-@app.route('/api/loyalty/card/<phone>', methods=['GET'])
-def get_loyalty_card(phone):
-    card = next((c for c in loyalty_cards_db if c['phone'] == phone), None)
-    if card:
-        return jsonify(card)
-    return jsonify({"error": "Loyalty card not found"}), 404
-
-# ===== SEARCH =====
-@app.route('/api/products/search', methods=['GET'])
-def search_products():
-    query = request.args.get('q', '').lower()
-    if not query:
-        return jsonify(PRODUCTS)
-    
-    results = [p for p in PRODUCTS if query in p['name'].lower() or query in p.get('description', '').lower()]
-    return jsonify(results)
-
-# ===== AUTHENTICATION ROUTES =====
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    try:
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
-        email = data.get('email', '').strip()
-        
-        if not username or not password:
-            return jsonify({"error": "Username and password required"}), 400
-        
-        # Check if user already exists
-        existing_user = next((u for u in users_db if u['username'] == username), None)
-        if existing_user:
-            return jsonify({"error": "Username already exists"}), 400
-        
-        # Create new user
-        user = {
-            "id": f"USER-{len(users_db) + 1:05d}",
-            "username": username,
-            "password": password,  # In production, hash this!
-            "email": email,
-            "phone": data.get('phone', ''),
-            "type": "customer",
-            "created_at": datetime.now().isoformat()
+    """Register a new user"""
+    data = request.json
+    
+    # Check if username already exists
+    if any(user['username'] == data['username'] for user in users_db):
+        return jsonify({"error": "Username already exists"}), 400
+    
+    # Check if email already exists
+    if any(user['email'] == data['email'] for user in users_db):
+        return jsonify({"error": "Email already exists"}), 400
+    
+    # Create new user
+    new_user = {
+        "id": len(users_db) + 1,
+        "username": data['username'],
+        "email": data['email'],
+        "password": data['password'],  # In production, hash this!
+        "phone": data.get('phone', ''),
+        "role": "customer",
+        "created_at": datetime.now().isoformat()
+    }
+    
+    users_db.append(new_user)
+    
+    return jsonify({
+        "message": "Registration successful",
+        "user": {
+            "id": new_user['id'],
+            "username": new_user['username'],
+            "email": new_user['email'],
+            "role": new_user['role']
         }
-        
-        users_db.append(user)
-        
-        return jsonify({
-            "user": {
-                "id": user['id'],
-                "username": user['username'],
-                "email": user['email'],
-                "type": user['type']
-            }
-        }), 201
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
+    }), 201
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    try:
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
-        
-        if not username or not password:
-            return jsonify({"error": "Username and password required"}), 400
-        
-        # Check for admin password
-        ADMIN_PASSWORD = 'ITSALOTOFWORKMAN'
-        if password == ADMIN_PASSWORD:
-            return jsonify({
-                "user": {
-                    "username": username,
-                    "type": "admin",
-                    "displayName": f"{username} - ADMIN"
-                }
-            }), 200
-        
-        # Check for driver password (format: DRIVER1-secret)
-        import re
-        driver_pattern = r'^DRIVER(\d+)-(.+)$'
-        driver_match = re.match(driver_pattern, password)
-        
-        if driver_match:
-            driver_number = driver_match.group(1)
-            secret_key = driver_match.group(2)
-            driver_id = f"DRIVER{driver_number}"
-            
-            # Find driver in database
-            driver = next((d for d in drivers_db if d['driverNumber'] == driver_id and d['secretKey'] == secret_key), None)
-            
-            if driver:
-                return jsonify({
-                    "user": {
-                        "id": driver['id'],
-                        "username": driver['name'],
-                        "type": "driver",
-                        "driverNumber": driver_id,
-                        "displayName": f"{driver['name']} - {driver_id}"
-                    }
-                }), 200
-            else:
-                return jsonify({"error": "Invalid driver credentials"}), 401
-        
-        # Regular customer login
-        user = next((u for u in users_db if u['username'] == username and u['password'] == password), None)
-        
-        if not user:
-            return jsonify({"error": "Invalid username or password"}), 401
-        
+    """Login user or admin"""
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    # Check admin credentials first
+    if username == ADMIN_CREDENTIALS['username'] and password == ADMIN_CREDENTIALS['password']:
         return jsonify({
+            "message": "Login successful",
+            "user": {
+                "id": 0,
+                "username": "admin",
+                "role": "admin"
+            }
+        }), 200
+    
+    # Check driver credentials
+    driver = next((d for d in drivers_db if d['username'] == username and d['password'] == password), None)
+    if driver:
+        return jsonify({
+            "message": "Login successful",
+            "user": {
+                "id": driver['id'],
+                "username": driver['username'],
+                "role": "driver"
+            }
+        }), 200
+    
+    # Check customer credentials
+    user = next((u for u in users_db if u['username'] == username and u['password'] == password), None)
+    if user:
+        return jsonify({
+            "message": "Login successful",
             "user": {
                 "id": user['id'],
                 "username": user['username'],
                 "email": user['email'],
-                "type": user['type'],
-                "displayName": user['username']
+                "role": user['role']
             }
         }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    
+    return jsonify({"error": "Invalid credentials"}), 401
 
-# ===== DRIVER MANAGEMENT ROUTES (ADMIN ONLY) =====
+# ============================================
+# PRODUCT ROUTES
+# ============================================
+
+@app.route('/api/products', methods=['GET'])
+def get_products():
+    """Get all products"""
+    return jsonify({"products": PRODUCTS})
+
+@app.route('/api/admin/products', methods=['POST'])
+def add_product():
+    """Add a new product (admin only)"""
+    data = request.json
+    
+    new_product = {
+        "id": max([p['id'] for p in PRODUCTS]) + 1,
+        "name": data['name'],
+        "category": data['category'],
+        "price": float(data['price']),
+        "description": data.get('description', ''),
+        "image": data.get('image', '🛒'),
+        "stock": int(data.get('stock', 100))
+    }
+    
+    PRODUCTS.append(new_product)
+    
+    return jsonify({
+        "message": "Product added successfully",
+        "product": new_product
+    }), 201
+
+@app.route('/api/admin/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    """Update a product (admin only)"""
+    data = request.json
+    
+    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+    
+    product['name'] = data.get('name', product['name'])
+    product['category'] = data.get('category', product['category'])
+    product['price'] = float(data.get('price', product['price']))
+    product['description'] = data.get('description', product['description'])
+    product['stock'] = int(data.get('stock', product['stock']))
+    
+    return jsonify({
+        "message": "Product updated successfully",
+        "product": product
+    }), 200
+
+@app.route('/api/admin/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Delete a product (admin only)"""
+    global PRODUCTS
+    
+    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+    
+    PRODUCTS = [p for p in PRODUCTS if p['id'] != product_id]
+    
+    return jsonify({"message": "Product deleted successfully"}), 200
+
+# ============================================
+# ORDER ROUTES
+# ============================================
+
+@app.route('/api/orders', methods=['POST'])
+def create_order():
+    """Create a new order"""
+    data = request.json
+    
+    new_order = {
+        "id": len(orders_db) + 1,
+        "user_id": data.get('user_id'),
+        "customer_name": data['customer_name'],
+        "phone": data['phone'],
+        "address": data['address'],
+        "items": data['items'],
+        "total": data['total'],
+        "status": "pending",
+        "driver_id": None,
+        "created_at": datetime.now().isoformat()
+    }
+    
+    orders_db.append(new_order)
+    
+    return jsonify({
+        "message": "Order placed successfully",
+        "order": new_order
+    }), 201
+
+@app.route('/api/admin/orders', methods=['GET'])
+def get_all_orders():
+    """Get all orders (admin only)"""
+    return jsonify({"orders": orders_db})
+
+@app.route('/api/driver/orders', methods=['GET'])
+def get_driver_orders():
+    """Get orders for a specific driver"""
+    driver_id = request.args.get('driver_id', type=int)
+    
+    if driver_id:
+        driver_orders = [o for o in orders_db if o['driver_id'] == driver_id]
+    else:
+        driver_orders = [o for o in orders_db if o['status'] == 'pending']
+    
+    return jsonify({"orders": driver_orders})
+
+@app.route('/api/admin/orders/<int:order_id>/assign', methods=['PUT'])
+def assign_driver(order_id):
+    """Assign a driver to an order"""
+    data = request.json
+    
+    order = next((o for o in orders_db if o['id'] == order_id), None)
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+    
+    order['driver_id'] = data['driver_id']
+    order['status'] = 'assigned'
+    
+    return jsonify({
+        "message": "Driver assigned successfully",
+        "order": order
+    }), 200
+
+@app.route('/api/driver/orders/<int:order_id>/status', methods=['PUT'])
+def update_order_status(order_id):
+    """Update order status (driver)"""
+    data = request.json
+    
+    order = next((o for o in orders_db if o['id'] == order_id), None)
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+    
+    order['status'] = data['status']
+    
+    return jsonify({
+        "message": "Order status updated",
+        "order": order
+    }), 200
+
+# ============================================
+# DRIVER ROUTES
+# ============================================
+
 @app.route('/api/admin/drivers', methods=['GET'])
 def get_drivers():
-    return jsonify(drivers_db)
+    """Get all drivers"""
+    return jsonify({"drivers": drivers_db})
 
 @app.route('/api/admin/drivers', methods=['POST'])
-def create_driver():
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['driverNumber', 'name', 'phone', 'secretKey']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing required field: {field}"}), 400
-        
-        # Check if driver number already exists
-        existing_driver = next((d for d in drivers_db if d['driverNumber'] == data['driverNumber']), None)
-        if existing_driver:
-            return jsonify({"error": "Driver number already exists"}), 400
-        
-        # Create driver
-        driver = {
-            "id": f"DRV-{len(drivers_db) + 1:05d}",
-            "driverNumber": data['driverNumber'],
-            "name": data['name'],
-            "phone": data['phone'],
-            "vehicleType": data.get('vehicleType', 'motorcycle'),
-            "vehicleReg": data.get('vehicleReg', ''),
-            "secretKey": data['secretKey'],
-            "fullPassword": data.get('fullPassword', f"{data['driverNumber']}-{data['secretKey']}"),
-            "totalEarnings": 0,
-            "completedDeliveries": 0,
-            "createdAt": datetime.now().isoformat()
-        }
-        
-        drivers_db.append(driver)
-        
-        return jsonify(driver), 201
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+def add_driver():
+    """Add a new driver"""
+    data = request.json
+    
+    # Check if username already exists
+    if any(driver['username'] == data['username'] for driver in drivers_db):
+        return jsonify({"error": "Username already exists"}), 400
+    
+    new_driver = {
+        "id": len(drivers_db) + 1,
+        "name": data['name'],
+        "username": data['username'],
+        "password": data['password'],
+        "phone": data['phone'],
+        "vehicle": data['vehicle'],
+        "status": "available",
+        "created_at": datetime.now().isoformat()
+    }
+    
+    drivers_db.append(new_driver)
+    
+    return jsonify({
+        "message": "Driver added successfully",
+        "driver": new_driver
+    }), 201
 
-@app.route('/api/admin/drivers/<driver_id>', methods=['DELETE'])
+@app.route('/api/admin/drivers/<int:driver_id>', methods=['DELETE'])
 def delete_driver(driver_id):
-    try:
-        global drivers_db
-        driver = next((d for d in drivers_db if d['id'] == driver_id), None)
-        
-        if not driver:
-            return jsonify({"error": "Driver not found"}), 404
-        
-        drivers_db = [d for d in drivers_db if d['id'] != driver_id]
-        
-        return jsonify({"message": "Driver deleted successfully"}), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    """Delete a driver"""
+    global drivers_db
+    
+    driver = next((d for d in drivers_db if d['id'] == driver_id), None)
+    if not driver:
+        return jsonify({"error": "Driver not found"}), 404
+    
+    drivers_db = [d for d in drivers_db if d['id'] != driver_id]
+    
+    return jsonify({"message": "Driver deleted successfully"}), 200
 
-@app.route('/api/admin/drivers/<driver_id>', methods=['PUT'])
-def update_driver(driver_id):
-    try:
-        data = request.get_json()
-        driver = next((d for d in drivers_db if d['id'] == driver_id), None)
-        
-        if not driver:
-            return jsonify({"error": "Driver not found"}), 404
-        
-        # Update driver fields
-        driver['name'] = data.get('name', driver['name'])
-        driver['phone'] = data.get('phone', driver['phone'])
-        driver['vehicleType'] = data.get('vehicleType', driver['vehicleType'])
-        driver['vehicleReg'] = data.get('vehicleReg', driver['vehicleReg'])
-        driver['totalEarnings'] = data.get('totalEarnings', driver['totalEarnings'])
-        driver['completedDeliveries'] = data.get('completedDeliveries', driver['completedDeliveries'])
-        
-        return jsonify(driver), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+# ============================================
+# SERVE REACT APP (for production)
+# ============================================
 
-# ===== SERVE REACT APP =====
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):
-    if path and os.path.exists(os.path.join(app.static_folder, path)):
+    """Serve React frontend"""
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, 'index.html')
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
+# ============================================
+# RUN SERVER
+# ============================================
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f'🚀 NOORIY Backend starting on port {port}...')
     app.run(host='0.0.0.0', port=port, debug=False)
