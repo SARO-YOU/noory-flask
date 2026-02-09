@@ -6,22 +6,44 @@ function FeedbackForm({ onClose, user }) {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Here we'll send to backend later
-    console.log('Feedback submitted:', {
-      type,
-      subject,
-      message,
-      user: user?.username || 'Guest'
-    });
+    setLoading(true);
+    setError('');
 
-    setSuccess(true);
-    setTimeout(() => {
-      onClose();
-    }, 2000);
+    try {
+      const response = await fetch('https://noory-backend.onrender.com/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user?.id || null,
+          type: type,
+          subject: subject,
+          message: message
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } else {
+        setError(data.error || 'Failed to submit feedback');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -84,8 +106,10 @@ function FeedbackForm({ onClose, user }) {
             />
           </div>
           
-          <button type="submit" className="feedback-submit-btn">
-            Send Feedback
+          {error && <p className="error-message">{error}</p>}
+          
+          <button type="submit" className="feedback-submit-btn" disabled={loading}>
+            {loading ? 'Sending...' : 'Send Feedback'}
           </button>
         </form>
       </div>

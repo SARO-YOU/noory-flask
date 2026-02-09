@@ -1,6 +1,10 @@
 import './Cart.css'
+import { useState } from 'react'
+import Checkout from './components/Checkout'
 
-function Cart({ cart, isOpen, onClose, onRemove, onUpdateQuantity }) {
+function Cart({ cart, isOpen, onClose, onRemove, onUpdateQuantity, user }) {
+  const [showCheckout, setShowCheckout] = useState(false)
+
   // Remove item from cart
   const removeFromCart = (productId) => {
     onRemove(productId)
@@ -113,12 +117,27 @@ function Cart({ cart, isOpen, onClose, onRemove, onUpdateQuantity }) {
               <span className="total-label">Total:</span>
               <span className="total-price">KSh {totalPrice}</span>
             </div>
-            <button className="checkout-btn">
+            <button className="checkout-btn" onClick={() => setShowCheckout(true)}>
               Proceed to Checkout
             </button>
           </div>
         )}
       </div>
+
+      {/* Checkout Modal */}
+      {showCheckout && (
+        <Checkout
+          cart={cart}
+          onClose={() => setShowCheckout(false)}
+          onOrderSuccess={() => {
+            // Clear cart after successful order
+            cart.forEach(item => onRemove(item.id))
+            setShowCheckout(false)
+            onClose()
+          }}
+          user={user}
+        />
+      )}
     </>
   )
 }

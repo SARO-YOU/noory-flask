@@ -51,10 +51,14 @@ function App() {
   }
 
   useEffect(() => {
-    fetchProducts()
-    
-    // Check for saved user session
-    const savedUser = localStorage.getItem('nooriy_user')
+  // Fetch products on mount
+  const loadProducts = async () => {
+    await fetchProducts();
+  };
+  loadProducts();
+  
+  // Check for saved user session
+  const savedUser = localStorage.getItem('nooriy_user')
     if (savedUser) {
       try {
         const userData = JSON.parse(savedUser)
@@ -205,14 +209,14 @@ function App() {
           ))}
         </div>
       </div>
-
-      <Cart
-        cart={cart}
-        isOpen={cartOpen}
-        onClose={() => setCartOpen(false)}
-        onRemove={removeFromCart}
-        onUpdateQuantity={updateQuantity}
-      />
+<Cart
+  cart={cart}
+  isOpen={cartOpen}
+  onClose={() => setCartOpen(false)}
+  onRemove={removeFromCart}
+  onUpdateQuantity={updateQuantity}
+  user={user}
+/>
 
       {showLogin && (
         <UnifiedLogin 

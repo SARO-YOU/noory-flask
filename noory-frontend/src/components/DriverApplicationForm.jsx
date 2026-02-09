@@ -14,6 +14,8 @@ function DriverApplicationForm({ onClose, user }) {
     availability: 'fulltime'
   });
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
@@ -22,16 +24,36 @@ function DriverApplicationForm({ onClose, user }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Here we'll send to backend later
-    console.log('Driver application submitted:', formData);
+    setLoading(true);
+    setError('');
 
-    setSuccess(true);
-    setTimeout(() => {
-      onClose();
-    }, 3000);
+    try {
+      const response = await fetch('https://noory-backend.onrender.com/api/driver-applications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        setTimeout(() => {
+          onClose();
+        }, 3000);
+      } else {
+        setError(data.error || 'Failed to submit application');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -193,8 +215,10 @@ function DriverApplicationForm({ onClose, user }) {
             </div>
           </div>
           
-          <button type="submit" className="driver-submit-btn">
-            Submit Application
+          {error && <p className="error-message">{error}</p>}
+          
+          <button type="submit" className="driver-submit-btn" disabled={loading}>
+            {loading ? 'Submitting...' : 'Submit Application'}
           </button>
         </form>
       </div>
