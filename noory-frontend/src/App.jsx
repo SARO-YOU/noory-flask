@@ -28,10 +28,7 @@ function App() {
   // Initialize app
   useEffect(() => {
     const initializeApp = async () => {
-      // Fetch products
-      await fetchProducts()
-      
-      // Check for saved user session
+      // Check for saved user session FIRST
       const savedUser = localStorage.getItem('nooriy_user')
       if (savedUser) {
         try {
@@ -43,10 +40,13 @@ function App() {
         }
       }
       
-      // Minimum loading time for smooth UX (2 seconds)
+      // Fetch products
+      await fetchProducts()
+      
+      // Minimum loading time for smooth UX (2.5 seconds)
       setTimeout(() => {
         setLoading(false)
-      }, 2000)
+      }, 2500)
     }
     
     initializeApp()
@@ -136,143 +136,142 @@ function App() {
     ? products
     : products.filter(p => p.category === selectedCategory)
 
+  // ALWAYS show loading screen first
+  if (loading) {
+    return <LoadingScreen />
+  }
+
   // Show admin dashboard if user is admin
   if (user?.role === 'admin') {
     return <AdminDashboard onLogout={handleLogout} />
   }
 
   return (
-    <>
-      {/* Beautiful Loading Screen */}
-      {loading && <LoadingScreen />}
-      
-      {/* Main App */}
-      <div className="app">
-        {/* Header */}
-        <header className="header">
-          <div className="header-content">
-            <h1 className="logo">🛍️ NOORIY</h1>
-            <div className="header-actions">
-              {user ? (
-                <div className="user-menu">
-                  <span className="user-name">👤 {user.username}</span>
-                  <button onClick={handleLogout} className="logout-btn">Logout</button>
-                </div>
+    <div className="app">
+      {/* Header */}
+      <header className="header">
+        <div className="header-content">
+          <h1 className="logo">🛍️ NOORIY</h1>
+          <div className="header-actions">
+            {user ? (
+              <div className="user-menu">
+                <span className="user-name">👤 {user.username}</span>
+                <button onClick={handleLogout} className="logout-btn">Logout</button>
+              </div>
+            ) : (
+              <button onClick={() => setShowLogin(true)} className="login-btn">
+                👤 Profile
+              </button>
+            )}
+            <button onClick={() => setShowCart(true)} className="cart-btn">
+              🛒 Cart ({cart.length})
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Search Bar */}
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="🔍 Search products..."
+          className="search-bar"
+        />
+      </div>
+
+      {/* Category Filter */}
+      <div className="category-filter">
+        <button
+          className={selectedCategory === 'all' ? 'active' : ''}
+          onClick={() => setSelectedCategory('all')}
+        >
+          🛒 All Products
+        </button>
+        <button
+          className={selectedCategory === 'dairy' ? 'active' : ''}
+          onClick={() => setSelectedCategory('dairy')}
+        >
+          🥛 Dairy
+        </button>
+        <button
+          className={selectedCategory === 'pantry' ? 'active' : ''}
+          onClick={() => setSelectedCategory('pantry')}
+        >
+          🌾 Pantry
+        </button>
+        <button
+          className={selectedCategory === 'beverages' ? 'active' : ''}
+          onClick={() => setSelectedCategory('beverages')}
+        >
+          🥤 Beverages
+        </button>
+        <button
+          className={selectedCategory === 'snacks' ? 'active' : ''}
+          onClick={() => setSelectedCategory('snacks')}
+        >
+          🍪 Snacks
+        </button>
+        <button
+          className={selectedCategory === 'personal_care' ? 'active' : ''}
+          onClick={() => setSelectedCategory('personal_care')}
+        >
+          🧴 Personal Care
+        </button>
+        <button
+          className={selectedCategory === 'household' ? 'active' : ''}
+          onClick={() => setSelectedCategory('household')}
+        >
+          🧹 Household
+        </button>
+      </div>
+
+      {/* Products Grid */}
+      <div className="products-grid">
+        {filteredProducts.map(product => (
+          <div key={product.id} className="product-card">
+            <div className="product-image-container">
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.name} className="product-image" />
               ) : (
-                <button onClick={() => setShowLogin(true)} className="login-btn">
-                  👤 Profile
-                </button>
+                <div className="product-placeholder">📦</div>
               )}
-              <button onClick={() => setShowCart(true)} className="cart-btn">
-                🛒 Cart ({cart.length})
+            </div>
+            <h3 className="product-name">{product.name}</h3>
+            <p className="product-description">{product.description}</p>
+            <div className="product-footer">
+              <span className="product-price">KSh {product.price}</span>
+              <button
+                onClick={() => addToCart(product)}
+                className="add-to-cart-btn"
+                disabled={!product.in_stock}
+              >
+                {product.in_stock ? '+ Add' : 'Out of Stock'}
               </button>
             </div>
           </div>
-        </header>
-
-        {/* Search Bar */}
-        <div className="search-container">
-          <input
-            type="text"
-            placeholder="🔍 Search products..."
-            className="search-bar"
-          />
-        </div>
-
-        {/* Category Filter */}
-        <div className="category-filter">
-          <button
-            className={selectedCategory === 'all' ? 'active' : ''}
-            onClick={() => setSelectedCategory('all')}
-          >
-            🛒 All Products
-          </button>
-          <button
-            className={selectedCategory === 'dairy' ? 'active' : ''}
-            onClick={() => setSelectedCategory('dairy')}
-          >
-            🥛 Dairy
-          </button>
-          <button
-            className={selectedCategory === 'pantry' ? 'active' : ''}
-            onClick={() => setSelectedCategory('pantry')}
-          >
-            🌾 Pantry
-          </button>
-          <button
-            className={selectedCategory === 'beverages' ? 'active' : ''}
-            onClick={() => setSelectedCategory('beverages')}
-          >
-            🥤 Beverages
-          </button>
-          <button
-            className={selectedCategory === 'snacks' ? 'active' : ''}
-            onClick={() => setSelectedCategory('snacks')}
-          >
-            🍪 Snacks
-          </button>
-          <button
-            className={selectedCategory === 'personal_care' ? 'active' : ''}
-            onClick={() => setSelectedCategory('personal_care')}
-          >
-            🧴 Personal Care
-          </button>
-          <button
-            className={selectedCategory === 'household' ? 'active' : ''}
-            onClick={() => setSelectedCategory('household')}
-          >
-            🧹 Household
-          </button>
-        </div>
-
-        {/* Products Grid */}
-        <div className="products-grid">
-          {filteredProducts.map(product => (
-            <div key={product.id} className="product-card">
-              <div className="product-image-container">
-                {product.image_url ? (
-                  <img src={product.image_url} alt={product.name} className="product-image" />
-                ) : (
-                  <div className="product-placeholder">📦</div>
-                )}
-              </div>
-              <h3 className="product-name">{product.name}</h3>
-              <p className="product-description">{product.description}</p>
-              <div className="product-footer">
-                <span className="product-price">KSh {product.price}</span>
-                <button
-                  onClick={() => addToCart(product)}
-                  className="add-to-cart-btn"
-                  disabled={!product.in_stock}
-                >
-                  {product.in_stock ? '+ Add' : 'Out of Stock'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Cart Modal */}
-        {showCart && (
-          <Cart
-            cart={cart}
-            onClose={() => setShowCart(false)}
-            onUpdateQuantity={updateCartQuantity}
-            onRemove={removeFromCart}
-            onCheckout={handleCheckout}
-            total={calculateTotal()}
-          />
-        )}
-
-        {/* Login Modal */}
-        {showLogin && (
-          <UnifiedLogin
-            onClose={() => setShowLogin(false)}
-            onLogin={handleLogin}
-          />
-        )}
+        ))}
       </div>
-    </>
+
+      {/* Cart Modal */}
+      {showCart && (
+        <Cart
+          cart={cart}
+          onClose={() => setShowCart(false)}
+          onUpdateQuantity={updateCartQuantity}
+          onRemove={removeFromCart}
+          onCheckout={handleCheckout}
+          total={calculateTotal()}
+        />
+      )}
+
+      {/* Login Modal */}
+      {showLogin && (
+        <UnifiedLogin
+          onClose={() => setShowLogin(false)}
+          onLogin={handleLogin}
+        />
+      )}
+    </div>
   )
 }
 

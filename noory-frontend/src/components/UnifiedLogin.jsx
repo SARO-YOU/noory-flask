@@ -1,49 +1,74 @@
 import { useState } from 'react';
 import './UnifiedLogin.css';
 
-function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+function UnifiedLogin({ onClose, onLogin }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    phone: ''
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    setError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!username || !password) {
-      setError('Please enter both username and password');
-      return;
-    }
-
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
-      const response = await fetch('https://noory-backend.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        }),
-      });
+      if (isLogin) {
+        // LOGIN
+        const response = await fetch('https://noory-backend.onrender.com/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: formData.username,
+            password: formData.password
+          })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok) {
-        // Save user to localStorage for session persistence
-        localStorage.setItem('nooriy_user', JSON.stringify(data.user));
-        
-        // Pass user data to parent
-        onLoginSuccess(data.user);
+        if (response.ok) {
+          onLogin(data.user);
+        } else {
+          setError(data.error || 'Invalid credentials');
+        }
       } else {
-        setError(data.error || 'Login failed');
+        // REGISTER
+        if (!formData.email || !formData.username || !formData.password) {
+          setError('Please fill in all required fields');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('https://noory-backend.onrender.com/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          onLogin(data.user);
+        } else {
+          setError(data.error || 'Registration failed');
+        }
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Network error. Please try again.');
+      console.error('Auth error:', err);
+      setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -54,45 +79,87 @@ function UnifiedLogin({ onClose, onLoginSuccess, onRegisterClick }) {
       <div className="login-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>✕</button>
         
-        <h2>👤 Login</h2>
-        <p className="login-subtitle">Enter your credentials to continue</p>
+        <h2>{isLogin ? '🔐 Login' : '📝 Register'}</h2>
+        
+        {error && <div className="error-message">{error}</div>}
         
         <form onSubmit={handleSubmit}>
-          <div className="input-group">
+          <div className="form-group">
             <label>Username</label>
             <input
               type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="login-input"
-              autoComplete="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="Enter username"
+              required
             />
           </div>
 
-          <div className="input-group">
+          {!isLogin && (
+            <>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter email"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Phone (optional)</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="Enter phone number"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="form-group">
             <label>Password</label>
             <input
               type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="login-input"
-              autoComplete="current-password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter password"
+              required
             />
           </div>
-          
-          {error && <p className="error-message">{error}</p>}
-          
-          <button type="submit" className="login-submit-btn" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+
+          <button type="submit" className="submit-btn" disabled={loading}>
+            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Register')}
           </button>
         </form>
 
-        <div className="login-help">
-          <p>📝 Don't have an account? <button className="link-btn" onClick={onRegisterClick}>Register here</button></p>
-          <p className="hint-text">🚗 Drivers: Get credentials from admin</p>
-        </div>
+        <p className="toggle-text">
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button
+            type="button"
+            className="toggle-btn"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError('');
+              setFormData({ username: '', email: '', password: '', phone: '' });
+            }}
+          >
+            {isLogin ? 'Register' : 'Login'}
+          </button>
+        </p>
+
+        {isLogin && (
+          <div className="admin-hint">
+            💡 Tip: Admin password is <code>ITSALOTOFWORKMAN</code>
+          </div>
+        )}
       </div>
     </div>
   );
