@@ -3,6 +3,7 @@ import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from products import PRODUCTS
+import copy
 from datetime import datetime
 
 app = Flask(__name__, static_folder="static")
@@ -11,22 +12,95 @@ app = Flask(__name__, static_folder="static")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ===== In-memory storage =====
+# ===== In-memory storage =====
 orders_db = []
 loyalty_cards_db = []
 users_db = []
 drivers_db = []  # Store drivers here
+products_db = copy.deepcopy(PRODUCTS)  # Mutable product list
 
+# ===== PRODUCTS =====
 # ===== PRODUCTS =====
 @app.route('/api/products', methods=['GET'])
 def get_products():
-    return jsonify(PRODUCTS)
+    return jsonify(products_db)
 
 @app.route('/api/products/<product_id>', methods=['GET'])
 def get_product(product_id):
-    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
+    product = next((p for p in products_db if p['id'] == product_id), None)
     if product:
         return jsonify(product)
     return jsonify({"error": "Product not found"}), 404
+
+# ===== ADMIN PRODUCT MANAGEMENT =====
+@app.route('/api/admin/products', methods=['POST'])
+def add_product():
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name') or not data.get('price'):
+            return jsonify({"error": "Name and price are required"}), 400
+        
+        # Generate new product ID
+        existing_ids = [int(p['id']) for p in products_db]
+        new_id = str(max(existing_ids) + 1) if existing_ids else "1"
+        
+        # Create new product
+        new_product = {
+            "id": new_id,
+            "name": data['name'],
+            "description": data.get('description', ''),
+            "price": float(data['price']),
+            "category": data.get('category', 'pantry'),
+            "in_stock": data.get('in_stock', True),
+            "image_url": data.get('image_url', '')
+        }
+        
+        products_db.append(new_product)
+        
+        return jsonify(new_product), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/admin/products/<product_id>', methods=['PUT'])
+def update_product(product_id):
+    try:
+        data = request.get_json()
+        product = next((p for p in products_db if p['id'] == product_id), None)
+        
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        
+        # Update product fields
+        product['name'] = data.get('name', product['name'])
+        product['description'] = data.get('description', product['description'])
+        product['price'] = float(data.get('price', product['price']))
+        product['category'] = data.get('category', product['category'])
+        product['in_stock'] = data.get('in_stock', product['in_stock'])
+        product['image_url'] = data.get('image_url', product.get('image_url', ''))
+        
+        return jsonify(product), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/admin/products/<product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    try:
+        global products_db
+        product = next((p for p in products_db if p['id'] == product_id), None)
+        
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        
+        products_db = [p for p in products_db if p['id'] != product_id]
+        
+        return jsonify({"message": "Product deleted successfully"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 # ===== ORDERS =====
 @app.route('/api/orders', methods=['POST'])
