@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './AdminDashboard.css';
 
 function AdminDashboard({ onLogout }) {
@@ -271,7 +271,6 @@ function DeliveryZonesTab() {
 }
 
 // Products Tab
-f// Products Tab
 function ProductsTab() {
   const [products, setProducts] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -306,7 +305,7 @@ function ProductsTab() {
   };
 
   // Fetch on mount
-  useState(() => {
+  useEffect(() => {
     fetchProducts();
   }, []);
 
@@ -375,7 +374,7 @@ function ProductsTab() {
 
   // Delete product
   const handleDeleteProduct = async (productId) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
       const response = await fetch(`https://noory-backend.onrender.com/api/admin/products/${productId}`, {
@@ -649,10 +648,270 @@ function ProductsTab() {
 
 // Orders Tab
 function OrdersTab() {
+  const [orders, setOrders] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [assigningOrder, setAssigningOrder] = useState(null);
+
+  // Fetch functions
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('https://noory-backend.onrender.com/api/orders');
+      const data = await response.json();
+      setOrders(data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const response = await fetch('https://noory-backend.onrender.com/api/admin/drivers');
+      const data = await response.json();
+      setDrivers(data);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
+
+  // Fetch orders and drivers on mount
+  useEffect(() => {
+    fetchOrders();
+    fetchDrivers();
+  }, []);
+
+  const handleAssignDriver = async (orderId, driverNumber) => {
+    try {
+      const response = await fetch(`https://noory-backend.onrender.com/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_assigned: driverNumber,
+          status: 'assigned'
+        })
+      });
+
+      if (response.ok) {
+        const updatedOrder = await response.json();
+        setOrders(orders.map(o => o.order_id === orderId ? updatedOrder.order : o));
+        setAssigningOrder(null);
+        alert(`Order assigned to ${driverNumber}`);
+      }
+    } catch (error) {
+      console.error('Error assigning driver:', error);
+    }
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`https://noory-backend.onrender.com/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        const updatedOrder = await response.json();
+        setOrders(orders.map(o => o.order_id === orderId ? updatedOrder.order : o));
+        alert(`Order status updated to ${newStatus}`);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#f39c12',
+      assigned: '#3498db',
+      picked_up: '#9b59b6',
+      delivered: '#27ae60',
+      cancelled: '#e74c3c'
+    };
+    return colors[status] || '#95a5a6';
+  };
+
+  const filteredOrders = filterStatus === 'all' 
+    ? orders 
+    : orders.filter(o => o.status === filterStatus);
+
   return (
-    <div>
-      <h2>🛒 Orders Management</h2>
-      <p>Orders management coming next...</p>
+    <div className="orders-tab">
+      <div className="tab-header">
+        <h2>🛒 Orders Management</h2>
+        <div className="orders-stats">
+          <span className="stat-badge">Total: {orders.length}</span>
+          <span className="stat-badge pending">Pending: {orders.filter(o => o.status === 'pending').length}</span>
+          <span className="stat-badge assigned">Assigned: {orders.filter(o => o.status === 'assigned').length}</span>
+          <span className="stat-badge delivered">Delivered: {orders.filter(o => o.status === 'delivered').length}</span>
+        </div>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="filter-buttons">
+        <button 
+          className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('all')}
+        >
+          All Orders
+        </button>
+        <button 
+          className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('pending')}
+        >
+          Pending
+        </button>
+        <button 
+          className={`filter-btn ${filterStatus === 'assigned' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('assigned')}
+        >
+          Assigned
+        </button>
+        <button 
+          className={`filter-btn ${filterStatus === 'picked_up' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('picked_up')}
+        >
+          Picked Up
+        </button>
+        <button 
+          className={`filter-btn ${filterStatus === 'delivered' ? 'active' : ''}`}
+          onClick={() => setFilterStatus('delivered')}
+        >
+          Delivered
+        </button>
+      </div>
+
+      {/* Orders List */}
+      <div className="orders-list">
+        {filteredOrders.length === 0 ? (
+          <div className="empty-state">
+            <p>No orders yet. Orders will appear here when customers place them!</p>
+          </div>
+        ) : (
+          <div className="orders-grid">
+            {filteredOrders.map(order => (
+              <div key={order.order_id} className="order-card">
+                <div className="order-header">
+                  <h4>{order.order_id}</h4>
+                  <span 
+                    className="status-badge" 
+                    style={{ backgroundColor: getStatusColor(order.status) }}
+                  >
+                    {order.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="order-customer">
+                  <p><strong>👤 Customer:</strong> {order.customer_name}</p>
+                  <p><strong>📱 Phone:</strong> {order.phone}</p>
+                  <p><strong>📍 Address:</strong> {order.address}</p>
+                  <p><strong>🗺️ Zone:</strong> {order.delivery_zone}</p>
+                </div>
+
+                <div className="order-items">
+                  <strong>📦 Items:</strong>
+                  <ul>
+                    {order.items.map((item, idx) => (
+                      <li key={idx}>
+                        {item.name} x{item.quantity} - KSh {item.price * item.quantity}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="order-totals">
+                  <p><strong>Subtotal:</strong> KSh {order.subtotal}</p>
+                  <p><strong>Delivery:</strong> KSh {order.delivery_fee}</p>
+                  <p className="total"><strong>TOTAL:</strong> KSh {order.total}</p>
+                  <p><strong>Payment:</strong> {order.payment_method.toUpperCase()}</p>
+                </div>
+
+                {order.delivery_notes && (
+                  <div className="order-notes">
+                    <strong>📝 Notes:</strong> {order.delivery_notes}
+                  </div>
+                )}
+
+                <div className="order-driver">
+                  {order.driver_assigned ? (
+                    <p><strong>🚗 Driver:</strong> {order.driver_assigned}</p>
+                  ) : (
+                    <p className="no-driver">⚠️ No driver assigned</p>
+                  )}
+                </div>
+
+                <div className="order-actions">
+                  {/* Assign Driver */}
+                  {order.status === 'pending' && (
+                    <div className="assign-driver-section">
+                      {assigningOrder === order.order_id ? (
+                        <div className="driver-select">
+                          <select 
+                            onChange={(e) => handleAssignDriver(order.order_id, e.target.value)}
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Select Driver...</option>
+                            {drivers.map(driver => (
+                              <option key={driver.id} value={driver.driverNumber}>
+                                {driver.driverNumber} - {driver.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button 
+                            className="cancel-assign-btn"
+                            onClick={() => setAssigningOrder(null)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          className="assign-btn"
+                          onClick={() => setAssigningOrder(order.order_id)}
+                        >
+                          🚗 Assign Driver
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Status Update Buttons */}
+                  <div className="status-buttons">
+                    {order.status === 'assigned' && (
+                      <button 
+                        className="status-btn picked-up"
+                        onClick={() => handleUpdateStatus(order.order_id, 'picked_up')}
+                      >
+                        Mark Picked Up
+                      </button>
+                    )}
+                    {order.status === 'picked_up' && (
+                      <button 
+                        className="status-btn delivered"
+                        onClick={() => handleUpdateStatus(order.order_id, 'delivered')}
+                      >
+                        Mark Delivered
+                      </button>
+                    )}
+                    {(order.status === 'pending' || order.status === 'assigned') && (
+                      <button 
+                        className="status-btn cancelled"
+                        onClick={() => handleUpdateStatus(order.order_id, 'cancelled')}
+                      >
+                        Cancel Order
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="order-time">
+                  <small>🕐 Placed: {new Date(order.created_at).toLocaleString()}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -668,11 +927,8 @@ function CustomersTab() {
 }
 
 // Drivers Tab
-// Drivers Tab
 function DriversTab() {
-  const [drivers, setDrivers] = useState([
-    // Example drivers - these will come from backend
-  ]);
+  const [drivers, setDrivers] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newDriver, setNewDriver] = useState({
     driverNumber: '',
@@ -746,7 +1002,7 @@ function DriversTab() {
   };
 
   const handleDeleteDriver = async (driverId) => {
-    if (!confirm('Are you sure you want to delete this driver?')) return;
+    if (!window.confirm('Are you sure you want to delete this driver?')) return;
 
     try {
       const response = await fetch(`https://noory-backend.onrender.com/api/admin/drivers/${driverId}`, {
@@ -763,7 +1019,7 @@ function DriversTab() {
   };
 
   // Fetch drivers on mount
-  useState(() => {
+  useEffect(() => {
     fetch('https://noory-backend.onrender.com/api/admin/drivers')
       .then(res => res.json())
       .then(data => setDrivers(data))
