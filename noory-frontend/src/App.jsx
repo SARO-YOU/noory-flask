@@ -33,6 +33,8 @@ function App() {
       if (savedUser) {
         try {
           const userData = JSON.parse(savedUser)
+          console.log('🔍 Loaded user from localStorage:', userData)
+          console.log('🔍 User role:', userData.role)
           setUser(userData)
         } catch (err) {
           console.error('Error loading saved session:', err)
@@ -120,6 +122,10 @@ function App() {
 
   // Handle login
   const handleLogin = (userData) => {
+    console.log('✅ Login successful! User data:', userData)
+    console.log('✅ User role:', userData.role)
+    console.log('✅ Is admin?', userData.role === 'admin')
+    
     setUser(userData)
     localStorage.setItem('nooriy_user', JSON.stringify(userData))
     setShowLogin(false)
@@ -127,6 +133,7 @@ function App() {
 
   // Handle logout
   const handleLogout = () => {
+    console.log('🚪 Logging out...')
     setUser(null)
     localStorage.removeItem('nooriy_user')
   }
@@ -136,6 +143,11 @@ function App() {
     ? products
     : products.filter(p => p.category === selectedCategory)
 
+  // Debug logging
+  console.log('🔍 Current user:', user)
+  console.log('🔍 Is admin?', user?.role === 'admin')
+  console.log('🔍 Loading?', loading)
+
   // ALWAYS show loading screen first
   if (loading) {
     return <LoadingScreen />
@@ -143,9 +155,11 @@ function App() {
 
   // Show admin dashboard if user is admin
   if (user?.role === 'admin') {
+    console.log('✅ Rendering Admin Dashboard!')
     return <AdminDashboard onLogout={handleLogout} />
   }
 
+  console.log('✅ Rendering Main Shop')
   return (
     <div className="app">
       {/* Header */}
