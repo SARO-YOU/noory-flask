@@ -16,7 +16,16 @@ cli = sys.modules['flask.cli']
 cli.show_server_banner = lambda *x: None
 
 app = Flask(__name__)
-CORS(app)
+
+# ✅ FIXED CORS - Allow all origins and methods
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # Import email service (with fallback if not available)
 try:
@@ -858,20 +867,112 @@ def reject_driver_application(app_id):
 
 # ==================== ADMIN UTILITY ROUTES ====================
 
-@app.route('/api/admin/import-products', methods=['POST'])
+# ✅ FIXED: Import products with POST method and OPTIONS support
+@app.route('/api/admin/import-products', methods=['POST', 'OPTIONS'])
 def import_products_route():
-    """Import products from products.py - ADMIN ONLY"""
+    """Import 70+ products - ADMIN ONLY"""
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
-        from products import PRODUCTS
+        products_data = [
+            # Dairy (5 products)
+            {"name": "Fresh Milk 1L", "description": "Full cream fresh milk from local farms", "price": 150, "category": "Dairy", "stock": 100},
+            {"name": "Yogurt 500g", "description": "Creamy natural yogurt", "price": 120, "category": "Dairy", "stock": 100},
+            {"name": "Cheese 200g", "description": "Cheddar cheese block", "price": 280, "category": "Dairy", "stock": 100},
+            {"name": "Butter 250g", "description": "Salted butter", "price": 200, "category": "Dairy", "stock": 100},
+            {"name": "Cream 250ml", "description": "Heavy cream for cooking", "price": 180, "category": "Dairy", "stock": 100},
+            
+            # Pantry (15 products)
+            {"name": "Rice 2kg", "description": "Premium basmati rice", "price": 350, "category": "Pantry", "stock": 100},
+            {"name": "Pasta 500g", "description": "Italian spaghetti", "price": 150, "category": "Pantry", "stock": 100},
+            {"name": "Cooking Oil 2L", "description": "Sunflower cooking oil", "price": 450, "category": "Pantry", "stock": 100},
+            {"name": "Sugar 2kg", "description": "White refined sugar", "price": 250, "category": "Pantry", "stock": 100},
+            {"name": "Flour 2kg", "description": "All-purpose wheat flour", "price": 200, "category": "Pantry", "stock": 100},
+            {"name": "Salt 500g", "description": "Iodized table salt", "price": 50, "category": "Pantry", "stock": 100},
+            {"name": "Tea Leaves 250g", "description": "Premium Kenyan tea", "price": 180, "category": "Pantry", "stock": 100},
+            {"name": "Coffee 100g", "description": "Ground coffee beans", "price": 220, "category": "Pantry", "stock": 100},
+            {"name": "Bread", "description": "Fresh white bread loaf", "price": 60, "category": "Pantry", "stock": 100},
+            {"name": "Eggs (12 pack)", "description": "Farm fresh eggs", "price": 280, "category": "Pantry", "stock": 100},
+            {"name": "Honey 500g", "description": "Pure natural honey", "price": 450, "category": "Pantry", "stock": 100},
+            {"name": "Peanut Butter 500g", "description": "Creamy peanut butter", "price": 320, "category": "Pantry", "stock": 100},
+            {"name": "Jam 450g", "description": "Strawberry jam", "price": 280, "category": "Pantry", "stock": 100},
+            {"name": "Oats 500g", "description": "Rolled oats", "price": 180, "category": "Pantry", "stock": 100},
+            {"name": "Cornflakes 500g", "description": "Breakfast cereal", "price": 220, "category": "Pantry", "stock": 100},
+            
+            # Beverages (25 products)
+            {"name": "Coca Cola 2L", "description": "Classic Coca-Cola", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Pepsi 2L", "description": "Pepsi cola drink", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Sprite 2L", "description": "Lemon-lime soda", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Fanta Orange 2L", "description": "Orange flavored soda", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Orange Juice 1L", "description": "100% fresh orange juice", "price": 250, "category": "Beverages", "stock": 100},
+            {"name": "Apple Juice 1L", "description": "Pure apple juice", "price": 250, "category": "Beverages", "stock": 100},
+            {"name": "Mango Juice 1L", "description": "Tropical mango juice", "price": 270, "category": "Beverages", "stock": 100},
+            {"name": "Bottled Water 6-pack", "description": "500ml mineral water", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Sparkling Water 1L", "description": "Carbonated mineral water", "price": 150, "category": "Beverages", "stock": 100},
+            {"name": "Energy Drink 250ml", "description": "Red Bull energy drink", "price": 200, "category": "Beverages", "stock": 100},
+            {"name": "Iced Tea Lemon 500ml", "description": "Refreshing lemon iced tea", "price": 120, "category": "Beverages", "stock": 100},
+            {"name": "Iced Tea Peach 500ml", "description": "Sweet peach iced tea", "price": 120, "category": "Beverages", "stock": 100},
+            {"name": "Sports Drink 500ml", "description": "Electrolyte sports drink", "price": 150, "category": "Beverages", "stock": 100},
+            {"name": "Cranberry Juice 1L", "description": "Tart cranberry juice", "price": 280, "category": "Beverages", "stock": 100},
+            {"name": "Pineapple Juice 1L", "description": "Sweet pineapple juice", "price": 270, "category": "Beverages", "stock": 100},
+            {"name": "Lemonade 1L", "description": "Fresh squeezed lemonade", "price": 200, "category": "Beverages", "stock": 100},
+            {"name": "Ginger Ale 2L", "description": "Refreshing ginger ale", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Tonic Water 1L", "description": "Quinine tonic water", "price": 150, "category": "Beverages", "stock": 100},
+            {"name": "Coconut Water 500ml", "description": "Natural coconut water", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Green Tea 500ml", "description": "Unsweetened green tea", "price": 130, "category": "Beverages", "stock": 100},
+            {"name": "Coffee Drink 250ml", "description": "Ready-to-drink coffee", "price": 150, "category": "Beverages", "stock": 100},
+            {"name": "Fruit Punch 2L", "description": "Mixed fruit punch", "price": 220, "category": "Beverages", "stock": 100},
+            {"name": "Grape Juice 1L", "description": "100% grape juice", "price": 280, "category": "Beverages", "stock": 100},
+            {"name": "Vitamin Water 500ml", "description": "Enhanced vitamin water", "price": 180, "category": "Beverages", "stock": 100},
+            {"name": "Kombucha 500ml", "description": "Probiotic fermented tea", "price": 250, "category": "Beverages", "stock": 100},
+            
+            # Snacks (10 products)
+            {"name": "Potato Chips 100g", "description": "Crispy potato chips", "price": 80, "category": "Snacks", "stock": 100},
+            {"name": "Chocolate Bar 50g", "description": "Milk chocolate", "price": 100, "category": "Snacks", "stock": 100},
+            {"name": "Biscuits 200g", "description": "Assorted biscuits", "price": 120, "category": "Snacks", "stock": 100},
+            {"name": "Peanuts 250g", "description": "Roasted salted peanuts", "price": 150, "category": "Snacks", "stock": 100},
+            {"name": "Cookies 300g", "description": "Chocolate chip cookies", "price": 180, "category": "Snacks", "stock": 100},
+            {"name": "Popcorn 100g", "description": "Butter flavored popcorn", "price": 70, "category": "Snacks", "stock": 100},
+            {"name": "Pretzels 200g", "description": "Salted pretzels", "price": 140, "category": "Snacks", "stock": 100},
+            {"name": "Crackers 250g", "description": "Whole grain crackers", "price": 160, "category": "Snacks", "stock": 100},
+            {"name": "Granola Bars 6-pack", "description": "Oat and honey bars", "price": 220, "category": "Snacks", "stock": 100},
+            {"name": "Trail Mix 200g", "description": "Nuts and dried fruit mix", "price": 250, "category": "Snacks", "stock": 100},
+            
+            # Personal Care (10 products)
+            {"name": "Soap Bar 100g", "description": "Moisturizing bath soap", "price": 80, "category": "Personal Care", "stock": 100},
+            {"name": "Shampoo 400ml", "description": "Hair shampoo", "price": 280, "category": "Personal Care", "stock": 100},
+            {"name": "Toothpaste 100ml", "description": "Fluoride toothpaste", "price": 150, "category": "Personal Care", "stock": 100},
+            {"name": "Toilet Paper 4-pack", "description": "Soft toilet tissue", "price": 220, "category": "Personal Care", "stock": 100},
+            {"name": "Hand Sanitizer 250ml", "description": "Antibacterial hand gel", "price": 180, "category": "Personal Care", "stock": 100},
+            {"name": "Tissue Box", "description": "Facial tissues 100 sheets", "price": 120, "category": "Personal Care", "stock": 100},
+            {"name": "Deodorant 150ml", "description": "Roll-on deodorant", "price": 200, "category": "Personal Care", "stock": 100},
+            {"name": "Body Lotion 400ml", "description": "Moisturizing body lotion", "price": 320, "category": "Personal Care", "stock": 100},
+            {"name": "Conditioner 400ml", "description": "Hair conditioner", "price": 280, "category": "Personal Care", "stock": 100},
+            {"name": "Shower Gel 500ml", "description": "Refreshing shower gel", "price": 300, "category": "Personal Care", "stock": 100},
+            
+            # Household (10 products)
+            {"name": "Dish Soap 500ml", "description": "Dishwashing liquid", "price": 180, "category": "Household", "stock": 100},
+            {"name": "Laundry Detergent 1kg", "description": "Washing powder", "price": 350, "category": "Household", "stock": 100},
+            {"name": "Bleach 1L", "description": "Chlorine bleach", "price": 150, "category": "Household", "stock": 100},
+            {"name": "Floor Cleaner 1L", "description": "Multi-surface cleaner", "price": 280, "category": "Household", "stock": 100},
+            {"name": "Trash Bags 20-pack", "description": "Large garbage bags", "price": 220, "category": "Household", "stock": 100},
+            {"name": "Sponges 5-pack", "description": "Kitchen sponges", "price": 120, "category": "Household", "stock": 100},
+            {"name": "Air Freshener 300ml", "description": "Room spray", "price": 200, "category": "Household", "stock": 100},
+            {"name": "Paper Towels 2-pack", "description": "Absorbent paper rolls", "price": 180, "category": "Household", "stock": 100},
+            {"name": "Aluminum Foil 30m", "description": "Kitchen aluminum foil", "price": 220, "category": "Household", "stock": 100},
+            {"name": "Plastic Wrap 100m", "description": "Food wrap film", "price": 180, "category": "Household", "stock": 100}
+        ]
         
         db = get_db()
         
-        # Clear existing products
+        # Clear existing products (optional)
         db.execute('DELETE FROM products')
         
         # Import all products
-        imported = 0
-        for product in PRODUCTS:
+        imported_count = 0
+        for product in products_data:
             db.execute('''
                 INSERT INTO products (name, price, category, description, image, stock)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -880,17 +981,18 @@ def import_products_route():
                 product['price'],
                 product['category'],
                 product['description'],
-                product['image_url'],
-                100
+                '',  # No image for now
+                product['stock']
             ))
-            imported += 1
+            imported_count += 1
         
         db.commit()
         
         return jsonify({
-            'message': f'Successfully imported {imported} products!',
-            'count': imported
+            'message': f'Successfully imported {imported_count} products!',
+            'count': imported_count
         }), 200
+        
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
