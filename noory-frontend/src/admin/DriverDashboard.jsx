@@ -1,209 +1,221 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './DriverDashboard.css';
 
-function DriverDashboard({ driver, onLogout }) {
-  const [activeOrders, setActiveOrders] = useState([]);
-  const [completedOrders, setCompletedOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('available');
+const DriverDashboard = ({ driver, onLogout }) => {
+  const [activeTab, setActiveTab] = useState('deliveries');
+  const [orders, setOrders] = useState([]);
+  const [earnings, setEarnings] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Mock available orders
-  const availableOrders = [
-    {
-      id: 'ORD001',
-      customer: 'John Doe',
-      items: 5,
-      total: 2500,
-      address: 'Nairobi, Westlands',
-      distance: '3.2 km',
-      time: '15 mins ago'
-    }
-  ];
+  const API_URL = 'https://noory-backend.onrender.com/api';
 
-  const acceptOrder = (orderId) => {
-    const order = availableOrders.find(o => o.id === orderId);
-    if (order) {
-      setActiveOrders([...activeOrders, { ...order, status: 'accepted' }]);
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      if (activeTab === 'deliveries') {
+        const response = await fetch(`${API_URL}/orders/driver/${driver.id}`);
+        const data = await response.json();
+        setOrders(data);
+      } else if (activeTab === 'earnings') {
+        const response = await fetch(`${API_URL}/drivers/${driver.id}/earnings`);
+        const data = await response.json();
+        setEarnings(data);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
     }
+    setLoading(false);
   };
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setActiveOrders(activeOrders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
-    
-    if (newStatus === 'delivered') {
-      const order = activeOrders.find(o => o.id === orderId);
-      setActiveOrders(activeOrders.filter(o => o.id !== orderId));
-      setCompletedOrders([...completedOrders, { ...order, status: 'delivered' }]);
+  const handleConfirmDelivery = async (orderId) => {
+    if (!window.confirm('Confirm this delivery?')) return;
+
+    try {
+      const response = await fetch(`${API_URL}/orders/${orderId}/confirm-delivery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed_by: 'driver' })
+      });
+
+      const data = await response.json();
+      alert(data.message);
+      loadData();
+    } catch (error) {
+      alert('Error confirming delivery');
     }
   };
 
   return (
     <div className="driver-dashboard">
-      {/* Header */}
-      <header className="driver-header">
-        <h1>🚗 Driver Dashboard</h1>
-        <div className="driver-info">
-          <span>👤 {driver.username}</span>
-          <button className="driver-logout-btn" onClick={onLogout}>
-            Logout
-          </button>
+      <div className="driver-header">
+        <div>
+          <h1>🚗 Driver Dashboard</h1>
+          <p>Welcome, {driver.name} ({driver.driver_number})</p>
         </div>
-      </header>
+        <button onClick={onLogout} className="logout-btn">Logout</button>
+      </div>
 
-      {/* Stats Bar */}
-      <div className="driver-stats">
-        <div className="driver-stat">
-          <div className="stat-number">{availableOrders.length}</div>
-          <div className="stat-label">Available</div>
+      <div className="driver-stats-bar">
+        <div className="stat">
+          <span className="label">Total Deliveries</span>
+          <span className="value">{driver.total_deliveries}</span>
         </div>
-        <div className="driver-stat">
-          <div className="stat-number">{activeOrders.length}</div>
-          <div className="stat-label">Active</div>
+        <div className="stat">
+          <span className="label">Total Earnings</span>
+          <span className="value">KSh {driver.total_earnings.toFixed(2)}</span>
         </div>
-        <div className="driver-stat">
-          <div className="stat-number">{completedOrders.length}</div>
-          <div className="stat-label">Completed</div>
+        <div className="stat">
+          <span className="label">Commission Rate</span>
+          <span className="value">30%</span>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="driver-tabs">
         <button 
-          className={`driver-tab ${activeTab === 'available' ? 'active' : ''}`}
-          onClick={() => setActiveTab('available')}
+          className={activeTab === 'deliveries' ? 'active' : ''} 
+          onClick={() => setActiveTab('deliveries')}
         >
-          📋 Available Orders
+          📦 My Deliveries
         </button>
         <button 
-          className={`driver-tab ${activeTab === 'active' ? 'active' : ''}`}
-          onClick={() => setActiveTab('active')}
+          className={activeTab === 'earnings' ? 'active' : ''} 
+          onClick={() => setActiveTab('earnings')}
         >
-          🚚 Active Deliveries
-        </button>
-        <button 
-          className={`driver-tab ${activeTab === 'completed' ? 'active' : ''}`}
-          onClick={() => setActiveTab('completed')}
-        >
-          ✅ Completed
+          💰 Earnings History
         </button>
       </div>
 
-      {/* Content */}
       <div className="driver-content">
-        {activeTab === 'available' && (
-          <div className="orders-list">
-            {availableOrders.length === 0 ? (
-              <div className="no-orders">
-                <p>🔍 No available orders at the moment</p>
-                <small>New orders will appear here automatically</small>
+        {loading && <div className="loading">Loading...</div>}
+
+        {/* DELIVERIES TAB */}
+        {activeTab === 'deliveries' && (
+          <div className="deliveries-section">
+            <h2>Assigned Deliveries ({orders.length})</h2>
+            {orders.length === 0 ? (
+              <div className="no-deliveries">
+                <p>✅ No pending deliveries at the moment!</p>
+                <p>Check back later for new assignments.</p>
               </div>
             ) : (
-              availableOrders.map(order => (
-                <div key={order.id} className="order-card available">
-                  <div className="order-header">
-                    <span className="order-id">#{order.id}</span>
-                    <span className="order-time">{order.time}</span>
+              <div className="deliveries-list">
+                {orders.map(order => (
+                  <div key={order.id} className="delivery-card">
+                    <div className="delivery-header">
+                      <h3>Order #{order.id}</h3>
+                      <span className={`status ${order.status}`}>{order.status}</span>
+                    </div>
+
+                    <div className="customer-info">
+                      <h4>📍 Delivery Details</h4>
+                      <p><strong>Customer:</strong> {order.username}</p>
+                      <p><strong>Phone:</strong> {order.phone}</p>
+                      <p><strong>Address:</strong> {order.address}</p>
+                    </div>
+
+                    <div className="order-details">
+                      <h4>📦 Order Items</h4>
+                      {order.items.map(item => (
+                        <div key={item.id} className="order-item">
+                          {item.product_name} x{item.quantity} - KSh {(item.price * item.quantity).toFixed(2)}
+                        </div>
+                      ))}
+                      <div className="order-total">
+                        <strong>Total:</strong> KSh {(order.total_amount + order.delivery_fee).toFixed(2)}
+                      </div>
+                      <div className="delivery-fee-info">
+                        <p>Delivery Fee: KSh {order.delivery_fee}</p>
+                        <p>Your Earning: KSh {(order.delivery_fee * 0.3).toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    <div className="delivery-actions">
+                      {order.status === 'out_for_delivery' && !order.driver_confirmed && (
+                        <button 
+                          onClick={() => handleConfirmDelivery(order.id)}
+                          className="confirm-btn"
+                        >
+                          ✅ Confirm Delivery
+                        </button>
+                      )}
+                      
+                      {order.driver_confirmed && !order.customer_confirmed && (
+                        <div className="waiting-customer">
+                          ⏳ Waiting for customer confirmation...
+                        </div>
+                      )}
+
+                      {order.driver_confirmed && order.customer_confirmed && (
+                        <div className="completed">
+                          ✅ Delivery Completed!
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="order-timestamp">
+                      Ordered: {new Date(order.created_at).toLocaleString()}
+                    </div>
                   </div>
-                  <div className="order-details">
-                    <p><strong>👤 Customer:</strong> {order.customer}</p>
-                    <p><strong>📍 Address:</strong> {order.address}</p>
-                    <p><strong>📦 Items:</strong> {order.items} items</p>
-                    <p><strong>💰 Total:</strong> KSh {order.total}</p>
-                    <p><strong>📏 Distance:</strong> {order.distance}</p>
-                  </div>
-                  <button 
-                    className="accept-order-btn"
-                    onClick={() => acceptOrder(order.id)}
-                  >
-                    ✅ Accept Order
-                  </button>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {activeTab === 'active' && (
-          <div className="orders-list">
-            {activeOrders.length === 0 ? (
-              <div className="no-orders">
-                <p>📦 No active deliveries</p>
-                <small>Accept orders to start delivering</small>
-              </div>
-            ) : (
-              activeOrders.map(order => (
-                <div key={order.id} className="order-card active">
-                  <div className="order-header">
-                    <span className="order-id">#{order.id}</span>
-                    <span className={`order-status ${order.status}`}>
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="order-details">
-                    <p><strong>👤 Customer:</strong> {order.customer}</p>
-                    <p><strong>📍 Address:</strong> {order.address}</p>
-                    <p><strong>💰 Total:</strong> KSh {order.total}</p>
-                  </div>
-                  <div className="order-actions">
-                    {order.status === 'accepted' && (
-                      <button 
-                        className="status-btn pickup"
-                        onClick={() => updateOrderStatus(order.id, 'picked_up')}
-                      >
-                        📦 Picked Up
-                      </button>
-                    )}
-                    {order.status === 'picked_up' && (
-                      <button 
-                        className="status-btn delivery"
-                        onClick={() => updateOrderStatus(order.id, 'on_the_way')}
-                      >
-                        🚚 On The Way
-                      </button>
-                    )}
-                    {order.status === 'on_the_way' && (
-                      <button 
-                        className="status-btn complete"
-                        onClick={() => updateOrderStatus(order.id, 'delivered')}
-                      >
-                        ✅ Mark Delivered
-                      </button>
-                    )}
-                  </div>
+        {/* EARNINGS TAB */}
+        {activeTab === 'earnings' && earnings && (
+          <div className="earnings-section">
+            <div className="earnings-summary">
+              <h2>💰 Earnings Summary</h2>
+              <div className="summary-grid">
+                <div className="summary-card">
+                  <h3>Total Earnings</h3>
+                  <p className="big-number">KSh {earnings.total_earnings.toFixed(2)}</p>
                 </div>
-              ))
-            )}
-          </div>
-        )}
+                <div className="summary-card">
+                  <h3>Completed Deliveries</h3>
+                  <p className="big-number">{earnings.total_deliveries}</p>
+                </div>
+                <div className="summary-card">
+                  <h3>Average per Delivery</h3>
+                  <p className="big-number">
+                    KSh {earnings.total_deliveries > 0 
+                      ? (earnings.total_earnings / earnings.total_deliveries).toFixed(2) 
+                      : '0.00'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-        {activeTab === 'completed' && (
-          <div className="orders-list">
-            {completedOrders.length === 0 ? (
-              <div className="no-orders">
-                <p>✅ No completed deliveries yet</p>
-                <small>Your completed orders will appear here</small>
-              </div>
-            ) : (
-              completedOrders.map(order => (
-                <div key={order.id} className="order-card completed">
-                  <div className="order-header">
-                    <span className="order-id">#{order.id}</span>
-                    <span className="order-status delivered">Delivered</span>
-                  </div>
-                  <div className="order-details">
-                    <p><strong>👤 Customer:</strong> {order.customer}</p>
-                    <p><strong>📍 Address:</strong> {order.address}</p>
-                    <p><strong>💰 Earned:</strong> KSh {order.total * 0.1}</p>
-                  </div>
+            <div className="delivery-history">
+              <h2>📜 Delivery History</h2>
+              {earnings.deliveries && earnings.deliveries.length > 0 ? (
+                <div className="history-list">
+                  {earnings.deliveries.map(delivery => (
+                    <div key={delivery.id} className="history-item">
+                      <div className="history-header">
+                        <strong>Order #{delivery.id}</strong>
+                        <span>KSh {(delivery.delivery_fee * 0.3).toFixed(2)}</span>
+                      </div>
+                      <p>Customer: {delivery.username}</p>
+                      <p>Address: {delivery.address}</p>
+                      <p>Delivered: {new Date(delivery.delivered_at).toLocaleString()}</p>
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
+              ) : (
+                <p>No completed deliveries yet.</p>
+              )}
+            </div>
           </div>
         )}
       </div>
     </div>
   );
-}
+};
 
 export default DriverDashboard;

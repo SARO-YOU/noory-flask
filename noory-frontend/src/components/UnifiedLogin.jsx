@@ -1,140 +1,135 @@
 import React, { useState } from 'react';
 import './UnifiedLogin.css';
 
-const UnifiedLogin = ({ onClose, onLoginSuccess }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+const UnifiedLogin = ({ onClose, onLogin }) => {
+  const [loginType, setLoginType] = useState('user'); // 'user', 'admin', 'driver'
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    phone: '',
+    address: '',
+    driver_number: ''
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const ADMIN_PASSWORD = 'ITSALOTOFWORKMAN';
-  const API_URL = 'https://noory-backend.onrender.com';
+  const API_URL = 'https://noory-backend.onrender.com/api';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    console.log('🔍 Login attempt - Username:', username, 'Password:', password);
-
-    // ADMIN CHECK - FIRST PRIORITY
-    if (password === ADMIN_PASSWORD) {
-      console.log('✅ ADMIN PASSWORD MATCHED!');
-      
-      const adminUser = {
-        id: 0,
-        username: username || 'admin',
-        email: 'admin@nooriy.com',
-        role: 'admin'
-      };
-
-      console.log('✅ Creating admin user object:', adminUser);
-      
-      // Save to localStorage
-      localStorage.setItem('nooriy_user', JSON.stringify(adminUser));
-      console.log('✅ Saved to localStorage:', localStorage.getItem('nooriy_user'));
-      
-      // Call success callback to update state
-      if (onLoginSuccess) {
-        onLoginSuccess(adminUser);
-      }
-      
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        console.log('✅ Reloading page to show Admin Dashboard...');
-        window.location.href = '/'; // Force full page reload
-      }, 100);
-      
-      return;
-    }
-
-    // REGULAR USER LOGIN
     try {
-      console.log('📡 Attempting regular user login...');
-      
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-      console.log('📡 Backend response:', data);
-
-      if (response.ok && data.user) {
-        console.log('✅ Regular login successful!', data.user);
-        
-        // Save to localStorage
-        localStorage.setItem('nooriy_user', JSON.stringify(data.user));
-        console.log('✅ Saved to localStorage:', localStorage.getItem('nooriy_user'));
-        
-        // Call success callback
-        if (onLoginSuccess) {
-          onLoginSuccess(data.user);
+      // ADMIN LOGIN
+      if (loginType === 'admin') {
+        if (formData.username.toLowerCase() === 'admin' && formData.password === ADMIN_PASSWORD) {
+          const adminUser = {
+            username: 'admin',
+            role: 'admin'
+          };
+          localStorage.setItem('nooriy_user', JSON.stringify(adminUser));
+          onLogin(adminUser);
+          window.location.href = '/';
+          return;
+        } else {
+          setError('Invalid admin credentials');
+          setLoading(false);
+          return;
         }
-        
-        // Close modal
-        onClose();
-        
-        // Reload page
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
+      }
+
+      // DRIVER LOGIN
+      if (loginType === 'driver') {
+        const response = await fetch(`${API_URL}/driver/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            driver_number: formData.driver_number,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem('nooriy_user', JSON.stringify(data.driver));
+          onLogin(data.driver);
+          window.location.href = '/';
+        } else {
+          setError(data.message || 'Driver login failed');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // USER LOGIN/REGISTRATION
+      if (isLogin) {
+        const response = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: formData.username,
+            password: formData.password
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem('nooriy_user', JSON.stringify(data.user));
+          onLogin(data.user);
+          onClose();
+        } else {
+          setError(data.message || 'Login failed');
+        }
       } else {
-        setError(data.message || 'Invalid credentials');
-        console.error('❌ Login failed:', data.message);
+        // Registration
+        const response = await fetch(`${API_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            phone: formData.phone,
+            address: formData.address
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          alert('Registration successful! Please login.');
+          setIsLogin(true);
+          setFormData({
+            username: '',
+            email: '',
+            password: '',
+            phone: '',
+            address: '',
+            driver_number: ''
+          });
+        } else {
+          setError(data.message || 'Registration failed');
+        }
       }
     } catch (err) {
-      console.error('❌ Login error:', err);
-      setError('Login failed. Please try again.');
+      console.error('Auth error:', err);
+      setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-          phone,
-          address,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Registration successful! Please login.');
-        setIsRegistering(false);
-        setEmail('');
-        setPhone('');
-        setAddress('');
-      } else {
-        setError(data.message || 'Registration failed');
-      }
-    } catch (err) {
-      console.error('Registration error:', err);
-      setError('Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   return (
@@ -142,75 +137,163 @@ const UnifiedLogin = ({ onClose, onLoginSuccess }) => {
       <div className="unified-login-modal" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>×</button>
         
-        <h2>{isRegistering ? 'Create Account' : 'Login'}</h2>
+        {/* Login Type Selector */}
+        <div className="login-type-selector">
+          <button 
+            className={loginType === 'user' ? 'active' : ''} 
+            onClick={() => setLoginType('user')}
+          >
+            👤 User
+          </button>
+          <button 
+            className={loginType === 'admin' ? 'active' : ''} 
+            onClick={() => setLoginType('admin')}
+          >
+            🔐 Admin
+          </button>
+          <button 
+            className={loginType === 'driver' ? 'active' : ''} 
+            onClick={() => setLoginType('driver')}
+          >
+            🚗 Driver
+          </button>
+        </div>
+
+        <h2>
+          {loginType === 'admin' && 'Admin Login'}
+          {loginType === 'driver' && 'Driver Login'}
+          {loginType === 'user' && (isLogin ? 'User Login' : 'Create Account')}
+        </h2>
         
         {error && <div className="error-message">{error}</div>}
         
-        <form onSubmit={isRegistering ? handleRegister : handleSubmit}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          
-          {isRegistering && (
+        <form onSubmit={handleSubmit}>
+          {/* ADMIN/USER LOGIN FIELDS */}
+          {(loginType === 'admin' || (loginType === 'user' && isLogin)) && (
             <>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <input
-                type="tel"
-                placeholder="Phone Number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Delivery Address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                required
-              />
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </>
           )}
-          
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          
-          <div className="admin-hint">
-            💡 Admin password: {ADMIN_PASSWORD}
-          </div>
-          
-          <button type="submit" disabled={loading}>
-            {loading ? 'Please wait...' : (isRegistering ? 'Register' : 'Login')}
+
+          {/* DRIVER LOGIN FIELDS */}
+          {loginType === 'driver' && (
+            <>
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="driver_number"
+                  placeholder="Driver Number (e.g., driver1)"
+                  value={formData.driver_number}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          {/* USER REGISTRATION FIELDS */}
+          {loginType === 'user' && !isLogin && (
+            <>
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Phone Number"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <textarea
+                  name="address"
+                  placeholder="Delivery Address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  rows="3"
+                />
+              </div>
+            </>
+          )}
+
+          <button type="submit" className="submit-btn" disabled={loading}>
+            {loading ? 'Please wait...' : 'Login'}
           </button>
         </form>
-        
-        <p className="toggle-form">
-          {isRegistering ? (
-            <>
-              Already have an account?{' '}
-              <span onClick={() => setIsRegistering(false)}>Login</span>
-            </>
-          ) : (
-            <>
-              Don't have an account?{' '}
-              <span onClick={() => setIsRegistering(true)}>Register</span>
-            </>
-          )}
-        </p>
+
+        {/* Toggle between login/register for users only */}
+        {loginType === 'user' && (
+          <p className="toggle-text">
+            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            <span onClick={() => setIsLogin(!isLogin)} className="toggle-link">
+              {isLogin ? 'Sign up' : 'Login'}
+            </span>
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,32 +1,30 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import './FeedbackForm.css';
 
-function FeedbackForm({ onClose, user }) {
-  const [type, setType] = useState('suggestion');
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [success, setSuccess] = useState(false);
+const FeedbackForm = ({ user, onClose }) => {
+  const [formData, setFormData] = useState({
+    type: 'suggestion',
+    message: '',
+    name: user?.username || '',
+    email: user?.email || ''
+  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const API_URL = 'https://noory-backend.onrender.com/api';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     setLoading(true);
-    setError('');
 
     try {
-      const response = await fetch('https://noory-backend.onrender.com/api/feedback', {
+      const response = await fetch(`${API_URL}/feedback`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: user?.id || null,
-          type: type,
-          subject: subject,
-          message: message
-        }),
+          ...formData,
+          user_id: user?.id || null
+        })
       });
 
       const data = await response.json();
@@ -37,23 +35,29 @@ function FeedbackForm({ onClose, user }) {
           onClose();
         }, 2000);
       } else {
-        setError(data.error || 'Failed to submit feedback');
+        alert(data.message || 'Failed to send feedback');
       }
-    } catch (err) {
-      setError('Network error. Please try again.');
+    } catch (error) {
+      alert('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   if (success) {
     return (
       <div className="feedback-overlay" onClick={onClose}>
         <div className="feedback-modal success-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="success-icon">✅</div>
-          <h2>Thank You!</h2>
-          <p>Your {type} has been submitted successfully.</p>
-          <p>We'll review it shortly!</p>
+          <h2>✅ Thank You!</h2>
+          <p>Your feedback has been sent to our team.</p>
+          <p>We appreciate your input and will review it soon.</p>
         </div>
       </div>
     );
@@ -62,59 +66,74 @@ function FeedbackForm({ onClose, user }) {
   return (
     <div className="feedback-overlay" onClick={onClose}>
       <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <button className="close-btn" onClick={onClose}>×</button>
         
         <h2>💬 Send Feedback</h2>
-        <p className="feedback-subtitle">We'd love to hear from you!</p>
-        
+        <p>We value your feedback! Let us know your thoughts, suggestions, or concerns.</p>
+
         <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label>Type</label>
+          <div className="form-group">
+            <label>Feedback Type</label>
             <select 
-              value={type} 
-              onChange={(e) => setType(e.target.value)}
-              className="feedback-select"
+              name="type" 
+              value={formData.type} 
+              onChange={handleChange}
+              required
             >
               <option value="suggestion">💡 Suggestion</option>
-              <option value="complaint">😞 Complaint</option>
-              <option value="compliment">😊 Compliment</option>
-              <option value="question">❓ Question</option>
+              <option value="complaint">😟 Complaint</option>
+              <option value="remark">💭 General Remark</option>
+              <option value="praise">⭐ Praise</option>
             </select>
           </div>
 
-          <div className="input-group">
-            <label>Subject</label>
-            <input
-              type="text"
-              placeholder="Brief subject line"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="feedback-input"
-              required
-            />
-          </div>
+          {!user && (
+            <>
+              <div className="form-group">
+                <label>Your Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Your name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-          <div className="input-group">
-            <label>Message</label>
+              <div className="form-group">
+                <label>Your Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="your.email@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          <div className="form-group">
+            <label>Your Message</label>
             <textarea
-              placeholder="Tell us more..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="feedback-textarea"
+              name="message"
+              placeholder="Tell us what's on your mind..."
+              value={formData.message}
+              onChange={handleChange}
               rows="6"
               required
             />
           </div>
-          
-          {error && <p className="error-message">{error}</p>}
-          
-          <button type="submit" className="feedback-submit-btn" disabled={loading}>
+
+          <button type="submit" className="submit-btn" disabled={loading}>
             {loading ? 'Sending...' : 'Send Feedback'}
           </button>
         </form>
       </div>
     </div>
   );
-}
+};
 
 export default FeedbackForm;
