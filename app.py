@@ -5,6 +5,9 @@ import hashlib
 import os
 import sys
 import logging
+import secrets
+import string
+from datetime import datetime, timedelta
 
 # Suppress Flask/Werkzeug startup messages
 log = logging.getLogger('werkzeug')
@@ -35,8 +38,10 @@ except ImportError as e:
     def send_order_status_update_email(*args, **kwargs):
         return False
 
-# Database setup
+# Constants
 DATABASE = 'nooriy.db'
+DELIVERY_FEE = 50  # KSh 50 delivery fee
+DRIVER_COMMISSION = 0.30  # Driver gets 30% of delivery fee
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -80,10 +85,17 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 total_amount REAL NOT NULL,
+                delivery_fee REAL DEFAULT 50,
                 status TEXT DEFAULT 'pending',
                 driver_id INTEGER,
+                payment_status TEXT DEFAULT 'pending',
+                mpesa_code TEXT,
+                customer_confirmed INTEGER DEFAULT 0,
+                driver_confirmed INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id)
+                delivered_at TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (driver_id) REFERENCES drivers (id)
             )
         ''')
         
@@ -104,10 +116,57 @@ def init_db():
         db.execute('''
             CREATE TABLE IF NOT EXISTS drivers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                driver_number TEXT UNIQUE NOT NULL,
                 name TEXT NOT NULL,
+                phone TEXT NOT NULL,
+                password TEXT NOT NULL,
+                vehicle TEXT,
+                license_plate TEXT,
+                status TEXT DEFAULT 'active',
+                total_earnings REAL DEFAULT 0,
+                total_deliveries INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Feedback table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                name TEXT,
+                email TEXT,
+                type TEXT NOT NULL,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        # Driver applications table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS driver_applications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
                 phone TEXT NOT NULL,
                 vehicle TEXT,
                 license_plate TEXT,
+                experience TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Password reset tokens table
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                used INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -143,7 +202,7 @@ def register():
             )
             db.commit()
             
-            # 📧 SEND REGISTRATION EMAIL (if enabled)
+            # Send registration email
             if EMAIL_ENABLED:
                 try:
                     send_registration_email(email, username)
@@ -180,11 +239,110 @@ def login():
                     'id': user['id'],
                     'username': user['username'],
                     'email': user['email'],
+                    'phone': user['phone'],
+                    'address': user['address'],
                     'role': 'user'
                 }
             }), 200
         else:
             return jsonify({'message': 'Invalid credentials'}), 401
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    try:
+        data = request.json
+        email = data.get('email')
+        
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+        
+        if not user:
+            return jsonify({'message': 'Email not found'}), 404
+        
+        # Generate reset token (6-digit code)
+        token = ''.join(secrets.choice(string.digits) for _ in range(6))
+        expires_at = datetime.now() + timedelta(hours=1)
+        
+        db.execute(
+            'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES (?, ?, ?)',
+            (email, token, expires_at)
+        )
+        db.commit()
+        
+        # TODO: Send email with reset code
+        print(f'Password reset code for {email}: {token}')
+        
+        return jsonify({'message': 'Reset code sent to your email'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    try:
+        data = request.json
+        email = data.get('email')
+        token = data.get('token')
+        new_password = data.get('new_password')
+        
+        db = get_db()
+        
+        # Verify token
+        reset_token = db.execute(
+            'SELECT * FROM password_reset_tokens WHERE email = ? AND token = ? AND used = 0 AND expires_at > ?',
+            (email, token, datetime.now())
+        ).fetchone()
+        
+        if not reset_token:
+            return jsonify({'message': 'Invalid or expired reset code'}), 400
+        
+        # Update password
+        hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
+        db.execute('UPDATE users SET password = ? WHERE email = ?', (hashed_password, email))
+        
+        # Mark token as used
+        db.execute('UPDATE password_reset_tokens SET used = 1 WHERE id = ?', (reset_token['id'],))
+        
+        db.commit()
+        
+        return jsonify({'message': 'Password reset successful'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# ==================== DRIVER AUTH ROUTES ====================
+
+@app.route('/api/driver/login', methods=['POST'])
+def driver_login():
+    try:
+        data = request.json
+        driver_number = data.get('driver_number')
+        password = data.get('password')
+        
+        # Hash password
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        db = get_db()
+        driver = db.execute(
+            'SELECT * FROM drivers WHERE driver_number = ? AND password = ? AND status = ?',
+            (driver_number, hashed_password, 'active')
+        ).fetchone()
+        
+        if driver:
+            return jsonify({
+                'message': 'Login successful',
+                'driver': {
+                    'id': driver['id'],
+                    'driver_number': driver['driver_number'],
+                    'name': driver['name'],
+                    'phone': driver['phone'],
+                    'total_earnings': driver['total_earnings'],
+                    'total_deliveries': driver['total_deliveries'],
+                    'role': 'driver'
+                }
+            }), 200
+        else:
+            return jsonify({'message': 'Invalid credentials or inactive driver'}), 401
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
@@ -246,12 +404,70 @@ def get_orders():
     try:
         db = get_db()
         orders = db.execute('''
-            SELECT o.*, u.username, u.email, u.phone, u.address, d.name as driver_name
+            SELECT o.*, u.username, u.email, u.phone, u.address, d.name as driver_name, d.driver_number
             FROM orders o
             JOIN users u ON o.user_id = u.id
             LEFT JOIN drivers d ON o.driver_id = d.id
             ORDER BY o.created_at DESC
         ''').fetchall()
+        
+        result = []
+        for order in orders:
+            items = db.execute('''
+                SELECT oi.*, p.name as product_name
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+            ''', (order['id'],)).fetchall()
+            
+            order_dict = dict(order)
+            order_dict['items'] = [dict(item) for item in items]
+            result.append(order_dict)
+        
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/orders/user/<int:user_id>', methods=['GET'])
+def get_user_orders(user_id):
+    try:
+        db = get_db()
+        orders = db.execute('''
+            SELECT o.*, d.name as driver_name, d.driver_number, d.phone as driver_phone
+            FROM orders o
+            LEFT JOIN drivers d ON o.driver_id = d.id
+            WHERE o.user_id = ?
+            ORDER BY o.created_at DESC
+        ''', (user_id,)).fetchall()
+        
+        result = []
+        for order in orders:
+            items = db.execute('''
+                SELECT oi.*, p.name as product_name, p.image
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+            ''', (order['id'],)).fetchall()
+            
+            order_dict = dict(order)
+            order_dict['items'] = [dict(item) for item in items]
+            result.append(order_dict)
+        
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/orders/driver/<int:driver_id>', methods=['GET'])
+def get_driver_orders(driver_id):
+    try:
+        db = get_db()
+        orders = db.execute('''
+            SELECT o.*, u.username, u.phone, u.address
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.driver_id = ? AND o.status != 'delivered'
+            ORDER BY o.created_at DESC
+        ''', (driver_id,)).fetchall()
         
         result = []
         for order in orders:
@@ -277,16 +493,17 @@ def create_order():
         user_id = data.get('user_id')
         items = data.get('items', [])
         total_amount = data.get('total_amount')
+        mpesa_code = data.get('mpesa_code')
         
         db = get_db()
         
-        # Get user info for email
+        # Get user info
         user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
         
         # Create order
         cursor = db.execute(
-            'INSERT INTO orders (user_id, total_amount, status) VALUES (?, ?, ?)',
-            (user_id, total_amount, 'pending')
+            'INSERT INTO orders (user_id, total_amount, delivery_fee, payment_status, mpesa_code, status) VALUES (?, ?, ?, ?, ?, ?)',
+            (user_id, total_amount, DELIVERY_FEE, 'paid', mpesa_code, 'pending')
         )
         order_id = cursor.lastrowid
         
@@ -299,7 +516,7 @@ def create_order():
         
         db.commit()
         
-        # 📧 SEND ORDER CONFIRMATION EMAIL (if enabled)
+        # Send order confirmation email
         if EMAIL_ENABLED and user:
             try:
                 email_items = []
@@ -315,7 +532,7 @@ def create_order():
                     user['email'],
                     user['username'],
                     order_id,
-                    total_amount,
+                    total_amount + DELIVERY_FEE,
                     email_items
                 )
                 print(f'✅ Order confirmation email sent to {user["email"]}')
@@ -332,7 +549,7 @@ def update_order(order_id):
         data = request.json
         db = get_db()
         
-        # Get current order info for email
+        # Get current order info
         order = db.execute('''
             SELECT o.*, u.username, u.email 
             FROM orders o 
@@ -342,6 +559,7 @@ def update_order(order_id):
         
         old_status = order['status'] if order else None
         new_status = data.get('status')
+        driver_id = data.get('driver_id')
         
         # Update order
         if 'status' in data and 'driver_id' in data:
@@ -360,9 +578,22 @@ def update_order(order_id):
                 (data['driver_id'], order_id)
             )
         
+        # If status changed to delivered, update driver earnings
+        if new_status == 'delivered' and old_status != 'delivered' and driver_id:
+            driver_earning = DELIVERY_FEE * DRIVER_COMMISSION
+            db.execute('''
+                UPDATE drivers 
+                SET total_earnings = total_earnings + ?, 
+                    total_deliveries = total_deliveries + 1 
+                WHERE id = ?
+            ''', (driver_earning, driver_id))
+            
+            # Set delivered timestamp
+            db.execute('UPDATE orders SET delivered_at = ? WHERE id = ?', (datetime.now(), order_id))
+        
         db.commit()
         
-        # 📧 SEND STATUS UPDATE EMAIL (if enabled and status changed)
+        # Send status update email
         if EMAIL_ENABLED and order and new_status and old_status != new_status:
             try:
                 send_order_status_update_email(
@@ -376,6 +607,43 @@ def update_order(order_id):
                 print(f'⚠️ Email sending failed: {str(e)}')
         
         return jsonify({'message': 'Order updated successfully'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/orders/<int:order_id>/confirm-delivery', methods=['POST'])
+def confirm_delivery(order_id):
+    try:
+        data = request.json
+        confirmed_by = data.get('confirmed_by')  # 'customer' or 'driver'
+        
+        db = get_db()
+        
+        if confirmed_by == 'customer':
+            db.execute('UPDATE orders SET customer_confirmed = 1 WHERE id = ?', (order_id,))
+        elif confirmed_by == 'driver':
+            db.execute('UPDATE orders SET driver_confirmed = 1 WHERE id = ?', (order_id,))
+        
+        # Check if both confirmed
+        order = db.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
+        
+        if order and order['customer_confirmed'] and order['driver_confirmed']:
+            # Both confirmed, mark as delivered
+            db.execute('UPDATE orders SET status = ?, delivered_at = ? WHERE id = ?', 
+                      ('delivered', datetime.now(), order_id))
+            
+            # Update driver earnings
+            if order['driver_id']:
+                driver_earning = DELIVERY_FEE * DRIVER_COMMISSION
+                db.execute('''
+                    UPDATE drivers 
+                    SET total_earnings = total_earnings + ?, 
+                        total_deliveries = total_deliveries + 1 
+                    WHERE id = ?
+                ''', (driver_earning, order['driver_id']))
+        
+        db.commit()
+        
+        return jsonify({'message': 'Delivery confirmed'}), 200
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
@@ -395,12 +663,32 @@ def add_driver():
     try:
         data = request.json
         db = get_db()
+        
+        # Auto-generate driver number
+        last_driver = db.execute('SELECT driver_number FROM drivers ORDER BY id DESC LIMIT 1').fetchone()
+        
+        if last_driver:
+            last_num = int(last_driver['driver_number'].replace('driver', ''))
+            new_num = last_num + 1
+        else:
+            new_num = 1
+        
+        driver_number = f'driver{new_num}'
+        
+        # Hash password
+        hashed_password = hashlib.sha256(data['password'].encode()).hexdigest()
+        
         db.execute(
-            'INSERT INTO drivers (name, phone, vehicle, license_plate) VALUES (?, ?, ?, ?)',
-            (data['name'], data['phone'], data.get('vehicle'), data.get('license_plate'))
+            'INSERT INTO drivers (driver_number, name, phone, password, vehicle, license_plate) VALUES (?, ?, ?, ?, ?, ?)',
+            (driver_number, data['name'], data['phone'], hashed_password, 
+             data.get('vehicle'), data.get('license_plate'))
         )
         db.commit()
-        return jsonify({'message': 'Driver added successfully'}), 201
+        
+        return jsonify({
+            'message': 'Driver added successfully',
+            'driver_number': driver_number
+        }), 201
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
@@ -408,9 +696,223 @@ def add_driver():
 def delete_driver(driver_id):
     try:
         db = get_db()
-        db.execute('DELETE FROM drivers WHERE id = ?', (driver_id,))
+        db.execute('UPDATE drivers SET status = ? WHERE id = ?', ('inactive', driver_id))
         db.commit()
-        return jsonify({'message': 'Driver deleted successfully'}), 200
+        return jsonify({'message': 'Driver removed successfully'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/drivers/<int:driver_id>/earnings', methods=['GET'])
+def get_driver_earnings(driver_id):
+    try:
+        db = get_db()
+        driver = db.execute('SELECT * FROM drivers WHERE id = ?', (driver_id,)).fetchone()
+        
+        # Get delivery history
+        deliveries = db.execute('''
+            SELECT o.id, o.created_at, o.delivered_at, o.delivery_fee, u.username, u.address
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.driver_id = ? AND o.status = 'delivered'
+            ORDER BY o.delivered_at DESC
+        ''', (driver_id,)).fetchall()
+        
+        return jsonify({
+            'driver': dict(driver) if driver else None,
+            'deliveries': [dict(d) for d in deliveries],
+            'total_earnings': driver['total_earnings'] if driver else 0,
+            'total_deliveries': driver['total_deliveries'] if driver else 0,
+            'commission_rate': DRIVER_COMMISSION
+        }), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# ==================== FEEDBACK ROUTES ====================
+
+@app.route('/api/feedback', methods=['GET'])
+def get_feedback():
+    try:
+        db = get_db()
+        feedback = db.execute('''
+            SELECT f.*, u.username, u.email as user_email
+            FROM feedback f
+            LEFT JOIN users u ON f.user_id = u.id
+            ORDER BY f.created_at DESC
+        ''').fetchall()
+        return jsonify([dict(f) for f in feedback]), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    try:
+        data = request.json
+        db = get_db()
+        
+        db.execute(
+            'INSERT INTO feedback (user_id, name, email, type, message) VALUES (?, ?, ?, ?, ?)',
+            (data.get('user_id'), data.get('name'), data.get('email'), 
+             data['type'], data['message'])
+        )
+        db.commit()
+        
+        return jsonify({'message': 'Feedback submitted successfully'}), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/feedback/<int:feedback_id>', methods=['PUT'])
+def update_feedback_status(feedback_id):
+    try:
+        data = request.json
+        db = get_db()
+        db.execute('UPDATE feedback SET status = ? WHERE id = ?', (data['status'], feedback_id))
+        db.commit()
+        return jsonify({'message': 'Feedback status updated'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# ==================== DRIVER APPLICATION ROUTES ====================
+
+@app.route('/api/driver-applications', methods=['GET'])
+def get_driver_applications():
+    try:
+        db = get_db()
+        applications = db.execute('SELECT * FROM driver_applications ORDER BY created_at DESC').fetchall()
+        return jsonify([dict(a) for a in applications]), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/driver-applications', methods=['POST'])
+def submit_driver_application():
+    try:
+        data = request.json
+        db = get_db()
+        
+        db.execute(
+            'INSERT INTO driver_applications (name, email, phone, vehicle, license_plate, experience) VALUES (?, ?, ?, ?, ?, ?)',
+            (data['name'], data['email'], data['phone'], 
+             data.get('vehicle'), data.get('license_plate'), data.get('experience'))
+        )
+        db.commit()
+        
+        return jsonify({'message': 'Application submitted successfully'}), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/driver-applications/<int:app_id>/approve', methods=['POST'])
+def approve_driver_application(app_id):
+    try:
+        data = request.json
+        db = get_db()
+        
+        # Get application
+        app = db.execute('SELECT * FROM driver_applications WHERE id = ?', (app_id,)).fetchone()
+        
+        if not app:
+            return jsonify({'message': 'Application not found'}), 404
+        
+        # Create driver account
+        last_driver = db.execute('SELECT driver_number FROM drivers ORDER BY id DESC LIMIT 1').fetchone()
+        
+        if last_driver:
+            last_num = int(last_driver['driver_number'].replace('driver', ''))
+            new_num = last_num + 1
+        else:
+            new_num = 1
+        
+        driver_number = f'driver{new_num}'
+        
+        # Hash the provided password
+        hashed_password = hashlib.sha256(data['password'].encode()).hexdigest()
+        
+        db.execute(
+            'INSERT INTO drivers (driver_number, name, phone, password, vehicle, license_plate) VALUES (?, ?, ?, ?, ?, ?)',
+            (driver_number, app['name'], app['phone'], hashed_password, 
+             app['vehicle'], app['license_plate'])
+        )
+        
+        # Update application status
+        db.execute('UPDATE driver_applications SET status = ? WHERE id = ?', ('approved', app_id))
+        
+        db.commit()
+        
+        return jsonify({
+            'message': 'Driver approved successfully',
+            'driver_number': driver_number
+        }), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/driver-applications/<int:app_id>/reject', methods=['POST'])
+def reject_driver_application(app_id):
+    try:
+        db = get_db()
+        db.execute('UPDATE driver_applications SET status = ? WHERE id = ?', ('rejected', app_id))
+        db.commit()
+        return jsonify({'message': 'Application rejected'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# ==================== ADMIN UTILITY ROUTES ====================
+
+@app.route('/api/admin/import-products', methods=['POST'])
+def import_products_route():
+    """Import products from products.py - ADMIN ONLY"""
+    try:
+        from products import PRODUCTS
+        
+        db = get_db()
+        
+        # Clear existing products
+        db.execute('DELETE FROM products')
+        
+        # Import all products with stock = 100
+        imported = 0
+        for product in PRODUCTS:
+            db.execute('''
+                INSERT INTO products (name, price, category, description, image, stock)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                product['name'],
+                product['price'],
+                product['category'],
+                product['description'],
+                product.get('image_url', ''),
+                100  # Set stock to 100
+            ))
+            imported += 1
+        
+        db.commit()
+        
+        return jsonify({
+            'message': f'Successfully imported {imported} products!',
+            'count': imported
+        }), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/admin/stats', methods=['GET'])
+def get_admin_stats():
+    """Get admin dashboard statistics"""
+    try:
+        db = get_db()
+        
+        total_users = db.execute('SELECT COUNT(*) as count FROM users').fetchone()['count']
+        total_orders = db.execute('SELECT COUNT(*) as count FROM orders').fetchone()['count']
+        total_products = db.execute('SELECT COUNT(*) as count FROM products').fetchone()['count']
+        total_drivers = db.execute('SELECT COUNT(*) as count FROM drivers WHERE status = "active"').fetchone()['count']
+        
+        total_revenue = db.execute('SELECT SUM(total_amount + delivery_fee) as revenue FROM orders WHERE payment_status = "paid"').fetchone()['revenue'] or 0
+        pending_orders = db.execute('SELECT COUNT(*) as count FROM orders WHERE status = "pending"').fetchone()['count']
+        
+        return jsonify({
+            'total_users': total_users,
+            'total_orders': total_orders,
+            'total_products': total_products,
+            'total_drivers': total_drivers,
+            'total_revenue': total_revenue,
+            'pending_orders': pending_orders
+        }), 200
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
